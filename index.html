@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dao động ký ảo v1 – Vật lý 11</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Dao động ký ảo – bản v1</h1>
+  <p class="sub">Li độ u theo thời gian t của âm thanh thu từ micro</p>
+
+  <div class="screen">
+    <canvas id="scope" width="900" height="450"></canvas>
+  </div>
+
+  <div class="panel">
+    <div>
+      <button id="btn" type="button">Bật micro</button>
+    </div>
+    <div class="readout">
+      <div class="freq"><span id="freq">—</span> <small>Hz</small></div>
+      <div class="meta">Tần số ước lượng (đếm điểm cắt trục hoành)</div>
+    </div>
+    <div>
+      <label for="gain">Biên độ hiển thị: <span id="gainVal">1.0</span>×</label>
+      <input id="gain" type="range" min="0.5" max="10" step="0.5" value="1">
+    </div>
+    <div class="meta" id="info">Chưa thu âm</div>
+    <div id="msg" role="status"></div>
+  </div>
+
+  <div class="limits">
+    <b>Hạn chế của v1:</b> dễ nhiễu với âm nhạc cụ (nhiều họa âm làm sóng cắt trục nhiều lần),
+    trục thời gian chưa chuẩn xác (chưa có thang ms/ô), chưa có nút dừng hình.
+  </div>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>

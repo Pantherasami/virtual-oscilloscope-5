@@ -1,0 +1,94 @@
+:root {
+  --bg: #14181c;
+  --panel: #1d2329;
+  --line: #2f3a43;
+  --text: #dfe8ee;
+  --muted: #8a9aa6;
+  --trace: #7cf2c4;
+  --grid: #26323a;
+  --warn: #f2b14c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  display: flex;
+  justify-content: center;
+  padding: 20px 12px;
+}
+
+main { width: 100%; max-width: 900px; }
+
+h1 { font-size: 1.25rem; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 16px; font-size: .9rem; }
+
+/* Màn hình sóng */
+.screen {
+  background: #0b0f12;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  padding: 6px;
+}
+canvas { display: block; width: 100%; height: auto; border-radius: 6px; }
+
+/* Bảng điều khiển */
+.panel {
+  margin-top: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--trace);
+  background: transparent;
+  color: var(--trace);
+  cursor: pointer;
+}
+button:hover { background: rgba(124, 242, 196, .12); }
+button.on { background: var(--trace); color: #0b0f12; }
+button:focus-visible,
+input:focus-visible { outline: 3px solid var(--warn); outline-offset: 2px; }
+
+.readout { text-align: right; }
+.freq {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--trace);
+  font-variant-numeric: tabular-nums;
+}
+.freq small { font-size: 1rem; color: var(--muted); font-weight: 400; }
+.meta { color: var(--muted); font-size: .85rem; }
+
+label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+input[type=range] { width: 100%; accent-color: var(--trace); }
+
+#msg { grid-column: 1 / -1; color: var(--warn); font-size: .9rem; min-height: 1.2em; }
+
+.limits {
+  margin-top: 14px;
+  font-size: .85rem;
+  color: var(--muted);
+  border-left: 3px solid var(--warn);
+  padding-left: 10px;
+}
+.limits b { color: var(--text); }
+
+@media (max-width: 560px) {
+  .panel { grid-template-columns: 1fr; }
+  .readout { text-align: left; }
+}
