@@ -1,42 +1,81 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dao động ký ảo v1 – Vật lý 11</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dao động ký ảo v1.1.0 – Vật lý 11</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main>
-  <h1>Dao động ký ảo – bản v1.0.0</h1>
-  <p class="sub">Li độ u theo thời gian t của âm thanh thu từ micro</p>
+  <main>
+    <header class="topbar">
+      <div>
+        <h1>Dao động ký ảo <span class="badge">v1.1.0</span></h1>
+        <p class="subtitle">Thí nghiệm sóng âm – Thuật toán Autocorrelation (NSDF) &amp; Nội suy Parabol</p>
+      </div>
+      <div class="status-pill" id="statusPill">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Sẵn sàng</span>
+      </div>
+    </header>
 
-  <div class="screen">
-    <canvas id="scope" width="900" height="450"></canvas>
-  </div>
-
-  <div class="panel">
-    <div>
-      <button id="btn" type="button">Bật micro</button>
+    <div class="scope-wrap">
+      <canvas id="scope" width="1000" height="640"></canvas>
+      <div class="hud-top-left" id="hudScale">5 ms/ô · 10×8 lưới</div>
+      <div class="hud-top-right" id="hudTrig">TRIGGER: —</div>
     </div>
-    <div class="readout">
-      <div class="freq"><span id="freq">—</span> <small>Hz</small></div>
-      <div class="meta">Tần số ước lượng (đếm điểm cắt trục hoành)</div>
-    </div>
-    <div>
-      <label for="gain">Biên độ hiển thị: <span id="gainVal">1.0</span>×</label>
-      <input id="gain" type="range" min="0.5" max="10" step="0.5" value="1">
-    </div>
-    <div class="meta" id="info">Chưa thu âm</div>
-    <div id="msg" role="status"></div>
-  </div>
 
-  <div class="limits">
-    <b>Hạn chế của v1:</b> dễ nhiễu với âm nhạc cụ (nhiều họa âm làm sóng cắt trục nhiều lần),
-    trục thời gian chưa chuẩn xác (chưa có thang ms/ô), chưa có nút dừng hình.
-  </div>
-</main>
+    <p id="msg" role="alert"></p>
 
-<script src="script.js"></script>
+    <section class="panel" aria-label="Bảng điều khiển">
+      <button id="btn" class="primary">Bật micro</button>
+      <button id="freeze" disabled>Dừng hình (Freeze)</button>
+
+      <label class="control">
+        <span>Thang thời gian</span>
+        <select id="scale">
+          <option value="1">1 ms/ô</option>
+          <option value="2">2 ms/ô</option>
+          <option value="5" selected>5 ms/ô</option>
+          <option value="10">10 ms/ô</option>
+          <option value="20">20 ms/ô</option>
+        </select>
+      </label>
+
+      <label class="control">
+        <span>Độ khuếch đại</span>
+        <input id="gain" type="range" min="0.5" max="10" step="0.5" value="4">
+        <span id="gainVal" class="mono">4.0×</span>
+      </label>
+    </section>
+
+    <section class="readout" aria-label="Thông số đo đạc">
+      <div class="card">
+        <span class="k">Tần số cơ bản (f)</span>
+        <span class="v"><b id="freq">—</b> <small>Hz</small></span>
+        <span class="sub" id="clarityInfo">Độ rõ sóng: —</span>
+      </div>
+      <div class="card">
+        <span class="k">Chu kỳ (T = 1000 / f)</span>
+        <span class="v"><b id="period">—</b> <small>ms</small></span>
+        <span class="sub">Tính song song theo f</span>
+      </div>
+      <div class="card">
+        <span class="k">Độ rộng 1 chu kỳ trên lưới</span>
+        <span class="v"><b id="cells">—</b> <small>ô ngang</small></span>
+        <span class="sub" id="cellsFormula">T / (ms/ô)</span>
+      </div>
+      <div class="card">
+        <span class="k">Trigger sườn lên (u = 0 ↑)</span>
+        <span class="v"><b id="trig">—</b></span>
+        <span class="sub" id="samplesPerDiv">— mẫu/ô</span>
+      </div>
+    </section>
+
+    <footer class="info-bar">
+      <span id="info">Bấm "Bật micro" để thu tín hiệu âm thanh từ micro.</span>
+    </footer>
+  </main>
+  <script src="script.js"></script>
 </body>
 </html>
