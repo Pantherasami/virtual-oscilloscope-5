@@ -1,3 +1,21 @@
+/*
+Dao động ký ảo (Virtual Oscilloscope) v1.1.0
+Copyright (C) 2026 Pantherasami
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+*/
+
 'use strict';
 
 // ===== Cấu hình hệ thống (v1.1.0) =====
@@ -32,6 +50,7 @@ const gainEl = $('gain');
 const gainVal = $('gainVal');
 const msg = $('msg');
 const info = $('info');
+const scopeWrap = document.querySelector('.scope-wrap');
 
 const freqEl = $('freq');
 const periodEl = $('period');
@@ -63,6 +82,7 @@ function findRisingZeroCrossing(x, span, rms) {
   let armed = false;
   let bestPos = -1;
   const maxStart = x.length - Math.ceil(span) - 2;
+  if (maxStart < 2) return -1;
 
   for (let i = 1; i < maxStart; i++) {
     if (x[i] < -hyst) {
@@ -230,7 +250,8 @@ function renderScope(x, sr, res) {
 
   // Quy đổi trực tiếp từ sampleRate thực tế sang số mẫu trên mỗi ô ngang
   const samplesPerDiv = (sr * msDiv) / 1000;
-  const totalSamples = samplesPerDiv * COLS;
+  // Chặn biên: không bao giờ đọc vượt quá bộ đệm (vd. sampleRate quá cao + 20 ms/ô)
+  const totalSamples = Math.min(samplesPerDiv * COLS, x.length - 3);
 
   drawGrid(W, H);
 
@@ -266,13 +287,17 @@ function renderScope(x, sr, res) {
       ctx2d.setLineDash([6, 4]);
       ctx2d.lineWidth = 1.5;
       ctx2d.beginPath();
-      ctx2d.moveTo(xT, 16);
+      ctx2d.moveTo(xT, 44);
       ctx2d.lineTo(xT, H - 16);
       ctx2d.stroke();
 
+      // Nhãn đặt sát đáy để không đè lên HUD ở góc trên
+      const label = `1T = ${cells.toFixed(2)} ô`;
       ctx2d.fillStyle = COLOR_TRIG;
-      ctx2d.font = '600 13px system-ui, sans-serif';
-      ctx2d.fillText(`1T = ${cells.toFixed(2)} ô`, Math.min(xT + 6, W - 95), 28);
+      ctx2d.font = '600 16px system-ui, sans-serif';
+      const tw = ctx2d.measureText(label).width;
+      const tx = xT + 8 + tw > W ? xT - 8 - tw : xT + 8;
+      ctx2d.fillText(label, tx, H - 24);
       ctx2d.restore();
     }
   }
@@ -286,8 +311,8 @@ function renderScope(x, sr, res) {
   const maxIdx = x.length - 2;
   for (let px = 0; px < W; px++) {
     const pos = startIdx + (px / (W - 1)) * totalSamples;
-    const i = Math.min(maxIdx, Math.floor(pos));
-    const frac = pos - i;
+    const i = Math.max(0, Math.min(maxIdx, Math.floor(pos)));
+    const frac = Math.max(0, Math.min(1, pos - i));
     const sampleVal = x[i] + (x[i + 1] - x[i]) * frac;
     const y = H / 2 - sampleVal * gain * (H / 2);
     if (px === 0) ctx2d.moveTo(px, y);
@@ -404,6 +429,7 @@ function stopMic() {
   freezeBtn.disabled = true;
   freezeBtn.textContent = 'Dừng hình (Freeze)';
   freezeBtn.classList.remove('freeze-on');
+  scopeWrap.classList.remove('is-frozen');
 
   updateStatus('idle');
   updateReadout(null, Number(scaleSel.value));
@@ -426,6 +452,7 @@ function setFreezeState(isFrozen) {
 
     freezeBtn.textContent = 'Chạy tiếp (Run)';
     freezeBtn.classList.add('freeze-on');
+    scopeWrap.classList.add('is-frozen');
     updateStatus('freeze');
 
     lastRes = estimateFundamental(frozen.data, frozen.sr);
@@ -435,6 +462,7 @@ function setFreezeState(isFrozen) {
     frozen = null;
     freezeBtn.textContent = 'Dừng hình (Freeze)';
     freezeBtn.classList.remove('freeze-on');
+    scopeWrap.classList.remove('is-frozen');
     if (audioCtx) {
       updateStatus('run');
       lastFreqTime = 0;

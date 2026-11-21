@@ -1,4 +1,21 @@
 <!DOCTYPE html>
+<!--
+Dao động ký ảo (Virtual Oscilloscope) v1.1.0
+Copyright (C) 2026 Pantherasami
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -32,7 +49,7 @@
       <button id="freeze" disabled>Dừng hình (Freeze)</button>
 
       <label class="control">
-        <span>Thang thời gian</span>
+        <span>Thang thời gian (ms/ô)</span>
         <select id="scale">
           <option value="1">1 ms/ô</option>
           <option value="2">2 ms/ô</option>
@@ -43,7 +60,7 @@
       </label>
 
       <label class="control">
-        <span>Độ khuếch đại</span>
+        <span>Độ khuếch đại (biên độ)</span>
         <input id="gain" type="range" min="0.5" max="10" step="0.5" value="4">
         <span id="gainVal" class="mono">4.0×</span>
       </label>
@@ -74,6 +91,10 @@
 
     <footer class="info-bar">
       <span id="info">Bấm "Bật micro" để thu tín hiệu âm thanh từ micro.</span>
+      <p class="license-note">
+      Phần mềm tự do, phát hành theo <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GNU GPL v3.0</a>, không kèm bảo đảm nào ·
+      <a href="https://github.com/Pantherasami/virtual-oscilloscope-5" target="_blank" rel="noopener">Mã nguồn</a>
+    </p>
     </footer>
   </main>
   <script src="script.js"></script>
