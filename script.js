@@ -1,5 +1,5 @@
 /*
-Dao động ký ảo (Virtual Oscilloscope) v2.0.0-alpha
+Dao động ký ảo (Virtual Oscilloscope) v2.0.0-alpha.1
 Copyright (C) 2026 Pantherasami
 
 This program is free software: you can redistribute it and/or modify
@@ -195,18 +195,10 @@ function readTheme() {
   COLOR_WAVE = v('--cvwave'); COLOR_TRIG = v('--cvtrig'); COLOR_PERIOD_GUIDE = v('--cvguide'); COLOR_LABEL = v('--cvlabel');
 }
 
-const idleImg = new Image();
-idleImg.onload = () => { if (typeof refresh === 'function') refresh(); };
-idleImg.src = 'assets/idle-wave.png';
-
 function renderIdle(gain) {
   const W = canvas.width;
   const H = canvas.height;
   drawGrid(W, H, gain);
-  if (idleImg.naturalWidth && document.documentElement.dataset.theme !== 'dark') {
-    const h = (W * idleImg.naturalHeight) / idleImg.naturalWidth;
-    ctx2d.drawImage(idleImg, 0, H / 2 - 0.5028 * h, W, h);   // trục hoành của ảnh trùng u = 0
-  }
 }
 
 // ===== 3. Vẽ lưới dao động ký 10×8 & đồ thị sóng =====
@@ -231,7 +223,7 @@ function drawGrid(W, H, gain) {
   }
   ctx2d.stroke();
 
-  // Trục (kiểu Wave tester): trục tung ở mép trái = gốc Trigger, trục hoành ở u = 0
+  // Trục (kiểu dao động ký): trục tung ở mép trái = gốc Trigger, trục hoành ở u = 0
   const midY = Math.round(H / 2) + 0.5;
   const axisX = 1.5;
   ctx2d.strokeStyle = COLOR_AXIS;

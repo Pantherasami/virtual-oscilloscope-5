@@ -256,17 +256,17 @@ Bản quyền (C) 2026 Pantherasami.
 
 ---
 
-## v2.0.0-alpha
+## v2.0.0-alpha.2
 
-- **VI:** Giao diện "Wave tester" với 3 chế độ **Light / Dark / FUMO** (nền `#c4dadb`); đồ thị ưu tiên lưới 10×8; âm mẫu (sine 100/200/440 Hz, nốt C4–C5, sáo, guitar, giọng /a/) có thể phát ra loa; hiển thị độ tin cậy phép đo (quá nhỏ / chu kỳ yếu / đã khóa); khi Freeze bấm vào đồ thị để đặt con trỏ A/B đo Δ; nút **Lưu ảnh PNG**.
-- **EN:** "Wave tester" UI with **Light / Dark / FUMO** themes, built-in test tones and instrument samples (optionally routed to the speaker), measurement-reliability cues, A/B cursors while frozen, and PNG snapshot.
+- **VI:** Giao diện "Virtual Oscilloscope" với 3 chế độ **Light / Dark / FUMO** (nền `#c4dadb`); đồ thị ưu tiên lưới 10×8; âm mẫu (sine 100/200/440 Hz, nốt C4–C5, sáo, guitar, giọng /a/) có thể phát ra loa; hiển thị độ tin cậy phép đo (quá nhỏ / chu kỳ yếu / đã khóa); khi Freeze bấm vào đồ thị để đặt con trỏ A/B đo Δ; nút **Lưu ảnh PNG**.
+- **EN:** "Virtual Oscilloscope" UI with **Light / Dark / FUMO** themes, built-in test tones and instrument samples (optionally routed to the speaker), measurement-reliability cues, A/B cursors while frozen, and PNG snapshot.
 
 | File | Vai trò / Role |
 |---|---|
 | `index.html` | Giao diện / page layout |
 | `style.css` | Giao diện Light / Dark / FUMO / themes and layout |
 | `script.js` | Một tệp, chia khối theo thứ tự: DSP (NSDF, parabol, trigger) → âm mẫu → vẽ canvas → trạng thái và DOM / one file, sections in order: DSP → samples → canvas → state and DOM |
-| `assets/` | `record.png`, `pause.png`, `fumo-small.png`, `idle-wave.png` |
+| `assets/` | `record.png`, `pause.png`, `fumo-small.png` |
 
 Dùng script thường (không ES module) nên mở được từ `file://`; micro vẫn cần `localhost` hoặc HTTPS. / Plain script (no ES modules); the microphone still needs `localhost` or HTTPS.
 

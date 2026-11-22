@@ -1,5 +1,5 @@
 /*
-Dao động ký ảo (Virtual Oscilloscope) v2.0.0-alpha
+Dao động ký ảo (Virtual Oscilloscope) v2.0.0-alpha.1
 Copyright (C) 2026 Pantherasami
 
 This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
 :root,[data-theme="fumo"]{--page:#c4dadb;--bg:#c4dadb;--card:rgba(255,255,255,.38);--line:rgba(155,28,28,.28);--text:#5a1414;--muted:#8b4a4a;--red:#9b1c1c;--hud:rgba(196,218,219,.88);--frame:#000;--cvbg:#c4dadb;--cvgrid:rgba(155,28,28,.13);--cvsub:rgba(0,0,0,.45);--cvaxis:#000;--cvwave:#ff3b30;--cvtrig:#c2410c;--cvguide:rgba(194,65,12,.65);--cvlabel:#8b1a1a;--rec:#ee6470;--pause:#7b8794;--accent:#d63446;--run:#1f9d55;--warn:#c2410c}
-[data-theme="light"]{--page:#e9eef3;--bg:#f7f9fb;--card:#fff;--line:#d3dce6;--text:#1b2530;--muted:#5b6876;--red:#c92a3a;--hud:rgba(255,255,255,.9);--frame:#1b2530;--cvbg:#fff;--cvgrid:rgba(30,50,80,.10);--cvsub:rgba(0,0,0,.4);--cvaxis:#111;--cvwave:#e03131;--cvlabel:#55606b}
+[data-theme="light"]{--page:#e9eef3;--bg:#f7f9fb;--card:#fff;--line:#d3dce6;--text:#000;--muted:#333;--red:#000;--hud:rgba(255,255,255,.9);--frame:#1b2530;--cvbg:#fff;--cvgrid:rgba(30,50,80,.10);--cvsub:rgba(0,0,0,.4);--cvaxis:#111;--cvwave:#e03131;--cvlabel:#55606b}
 [data-theme="dark"]{--page:#080d12;--bg:#080d12;--card:#111922;--line:#223142;--text:#e2ecf5;--muted:#8297ac;--red:#39ff88;--hud:rgba(8,13,18,.8);--frame:#263647;--cvbg:#03070b;--cvgrid:#162432;--cvsub:#223548;--cvaxis:#446280;--cvwave:#39ff88;--cvtrig:#ffb84d;--cvguide:rgba(255,184,77,.55);--cvlabel:#8297ac;--run:#39ff88;--warn:#ffb84d;--rec:#ff7a86;--pause:#9aa8b6}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:16px;
@@ -90,3 +90,7 @@ body{overflow-x:hidden;background:var(--page)}
 .site-footer p{margin:2px 0}.site-footer a{color:var(--red)}
 @media(max-width:640px){.card-main{padding:8px}.round .c{width:56px;height:56px}.round{font-size:1.05rem}.controls{gap:10px}.group{width:100%}
 .hud-top-left,.hud-top-right{font-size:.62rem;padding:2px 6px;top:6px}.readout{grid-template-columns:1fr 1fr}.v b{font-size:1.25rem}}
+.title-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.ver{display:inline-block;padding:3px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:.78rem;font-weight:600;letter-spacing:.3px;font-variant-numeric:tabular-nums}
+.gh img{display:none}
+[data-theme="fumo"] .gh img{display:block}
