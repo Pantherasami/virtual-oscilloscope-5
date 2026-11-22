@@ -253,3 +253,20 @@ README.md    tài liệu này
 Dự án là phần mềm tự do, phát hành theo **GNU General Public License v3.0**. Bạn được dùng, nghiên cứu, chia sẻ và sửa đổi theo các điều khoản của giấy phép này; bản sửa đổi khi phát hành lại cũng phải theo GPL-3.0, kèm mã nguồn và giữ nguyên thông báo bản quyền và giấy phép. Phần mềm **không kèm bảo đảm nào**. Xem file [`LICENSE`](LICENSE) hoặc <https://www.gnu.org/licenses/gpl-3.0.html>.
 
 Bản quyền (C) 2026 Pantherasami.
+
+---
+
+## v2.0.0-alpha
+
+- **VI:** Giao diện "Wave tester" với 3 chế độ **Light / Dark / FUMO** (nền `#c4dadb`); đồ thị ưu tiên lưới 10×8; âm mẫu (sine 100/200/440 Hz, nốt C4–C5, sáo, guitar, giọng /a/) có thể phát ra loa; hiển thị độ tin cậy phép đo (quá nhỏ / chu kỳ yếu / đã khóa); khi Freeze bấm vào đồ thị để đặt con trỏ A/B đo Δ; nút **Lưu ảnh PNG**.
+- **EN:** "Wave tester" UI with **Light / Dark / FUMO** themes, built-in test tones and instrument samples (optionally routed to the speaker), measurement-reliability cues, A/B cursors while frozen, and PNG snapshot.
+
+| File | Vai trò / Role |
+|---|---|
+| `index.html` | Giao diện / page layout |
+| `style.css` | Giao diện Light / Dark / FUMO / themes and layout |
+| `script.js` | Một tệp, chia khối theo thứ tự: DSP (NSDF, parabol, trigger) → âm mẫu → vẽ canvas → trạng thái và DOM / one file, sections in order: DSP → samples → canvas → state and DOM |
+| `assets/` | `record.png`, `pause.png`, `fumo-small.png`, `idle-wave.png` |
+
+Dùng script thường (không ES module) nên mở được từ `file://`; micro vẫn cần `localhost` hoặc HTTPS. / Plain script (no ES modules); the microphone still needs `localhost` or HTTPS.
+
