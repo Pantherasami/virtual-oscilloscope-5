@@ -1,5 +1,5 @@
 /*
-Dao động ký ảo (Virtual Oscilloscope) v2.0.0-alpha.1
+Dao động ký ảo (Virtual Oscilloscope) v2.0.0-beta.1
 Copyright (C) 2026 Pantherasami
 
 This program is free software: you can redistribute it and/or modify
@@ -140,11 +140,17 @@ function estimateFundamental(x, sr) {
   return { f, clarity: y2 };
 }
 
-// samples.js – âm mẫu tổng hợp (sine / sáo / đàn guitar / giọng /a/) để thử lặp lại được
-const SAMPLE_WAVES = {
-  flute: [0, 1, 0.25, 0.1, 0.04],
-  guitar: [0, 1, 0.7, 0.5, 0.35, 0.22, 0.12, 0.06]
+// samples.js – âm mẫu tổng hợp (sóng cơ bản, nhạc cụ, giọng /a/) để thử lặp lại được
+const SAMPLE_WAVES = {   // biên độ các họa âm 1, 2, 3, ... (âm sắc giữ ổn định để đo lặp lại được)
+  flute:    [0, 1, 0.25, 0.1, 0.04],
+  clarinet: [0, 1, 0, 0.55, 0, 0.3, 0, 0.15, 0, 0.08],
+  trumpet:  [0, 1, 0.9, 0.75, 0.6, 0.45, 0.3, 0.2, 0.12, 0.08],
+  guitar:   [0, 1, 0.7, 0.5, 0.35, 0.22, 0.12, 0.06],
+  piano:    [0, 1, 0.6, 0.38, 0.25, 0.15, 0.09, 0.06, 0.04, 0.02],
+  violin:   [0, 1, 0.5, 0.35, 0.3, 0.22, 0.18, 0.12, 0.1, 0.08],
+  organ:    [0, 1, 0.8, 0.6, 0.3, 0.4, 0.15, 0.2]
 };
+const NATIVE_WAVES = { sine: 'sine', square: 'square', triangle: 'triangle', sawtooth: 'sawtooth' };
 
 function makeSynth(ctx, kind, freq) {
   const osc = ctx.createOscillator();
@@ -166,7 +172,7 @@ function makeSynth(ctx, kind, freq) {
     if (amps) {
       osc.setPeriodicWave(ctx.createPeriodicWave(new Float32Array(amps.length), Float32Array.from(amps)));
     } else {
-      osc.type = 'sine';
+      osc.type = NATIVE_WAVES[kind] || 'sine';
     }
     osc.connect(out);
   }
@@ -257,13 +263,13 @@ function drawGrid(W, H, gain) {
   for (let c = 1; c <= COLS; c++) {
     const x = (c * W) / COLS;
     ctx2d.textAlign = c === COLS ? 'right' : 'center';
-    ctx2d.fillText(String(c), c === COLS ? x - 6 : x, midY + 20);
+    ctx2d.fillText(String(c), c === COLS ? x - 6 : x, midY + 6 + 15 * FS);
   }
   ctx2d.textAlign = 'left';
-  ctx2d.fillText('0', 8, midY + 20);
+  ctx2d.fillText('0', 8, midY + 6 + 15 * FS);
   const uq = (0.5 / gain).toPrecision(2);
   ctx2d.fillText('+' + uq, 8, H / 4 - 6);
-  ctx2d.fillText('\u2212' + uq, 8, (3 * H) / 4 + 18);
+  ctx2d.fillText('\u2212' + uq, 8, (3 * H) / 4 + 4 + 15 * FS);
 }
 
 function renderScope({ x, sr, res, msDiv, gain, cursors }) {
@@ -366,16 +372,35 @@ const $ = id => document.getElementById(id);
 
 let audioCtx = null, analyser = null, spkGain = null, synth = null, stream = null;
 let rafId = 0, buf = null, frozen = null, lastRes, lastFreqTime = 0, cursors = [];
+let autoG = 4, starting = false;
+
+// Độ khuếch đại tự động: đỉnh sóng (đã bỏ DC) trong phần đang hiển thị chiếm ~80% nửa chiều cao
+function autoTarget(x, sr, md) {
+  const n = Math.min(x.length, Math.round((sr * md * COLS) / 1000) + 2);
+  let mean = 0;
+  for (let i = x.length - n; i < x.length; i++) mean += x[i];
+  mean /= n;
+  let pk = 0;
+  for (let i = x.length - n; i < x.length; i++) pk = Math.max(pk, Math.abs(x[i] - mean));
+  return pk < 0.002 ? null : Math.min(50, Math.max(0.5, 0.8 / pk));
+}
 
 const pitch = () => Number($('pitch').value);
 
 function refresh() {
   const running = Boolean(audioCtx);
   const md = Number($('scale').value);
-  const g = Number($('gain').value);
   const x = frozen ? frozen.data : buf;
   const sr = running ? (frozen ? frozen.sr : audioCtx.sampleRate) : 0;
-  $('gainVal').textContent = g.toFixed(1) + '×';
+  const auto = $('autoGain').checked;
+  let g = Number($('gain').value);
+  if (running && auto) {
+    const t = autoTarget(x, sr, md);
+    if (t !== null) autoG = frozen ? t : autoG + (t - autoG) * 0.25;   // Freeze: giá trị cố định, không trôi
+    g = autoG;
+  }
+  $('gain').disabled = auto;
+  $('gainVal').textContent = g.toFixed(1) + '×' + (auto ? ' (tự động)' : '');
 
   let info = null;
   if (running) info = renderScope({ x, sr, res: lastRes, msDiv: md, gain: g, cursors: frozen ? cursors : [] });
@@ -451,37 +476,50 @@ function stop() {
 }
 
 async function start() {
+  if (starting) return;
   stop();
+  starting = true;
+  $('btn').disabled = $('source').disabled = true;   // tránh bấm Stop / đổi nguồn khi đang chờ quyền micro
   $('msg').textContent = '';
   const kind = $('source').value;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = FFT_SIZE;
-  analyser.smoothingTimeConstant = 0;
-  spkGain = audioCtx.createGain();
-  spkGain.connect(audioCtx.destination);
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  let st = null, sy = null, an = null, spk = null;
   try {
+    an = ctx.createAnalyser();
+    an.fftSize = FFT_SIZE;
+    an.smoothingTimeConstant = 0;
+    spk = ctx.createGain();
+    spk.connect(ctx.destination);
     if (kind === 'mic') {
-      stream = await navigator.mediaDevices.getUserMedia({
+      st = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
       });
-      audioCtx.createMediaStreamSource(stream).connect(analyser);
+      ctx.createMediaStreamSource(st).connect(an);
     } else {
-      synth = makeSynth(audioCtx, kind, pitch());
-      synth.out.connect(analyser);
-      synth.out.connect(spkGain);
+      sy = makeSynth(ctx, kind, pitch());
+      sy.out.connect(an);
+      sy.out.connect(spk);
     }
-    await audioCtx.resume();
+    await ctx.resume();
   } catch (err) {
+    if (st) st.getTracks().forEach(t => t.stop());
+    if (sy) sy.stop();
+    ctx.close();
     $('msg').textContent = location.protocol === 'file:' && kind === 'mic'
       ? 'Trình duyệt chặn micro khi mở trực tiếp file://. Hãy chạy qua localhost hoặc HTTPS (âm mẫu vẫn dùng được).'
       : 'Không thể khởi động nguồn âm: ' + err.message;
-    stop();
+    starting = false;
+    $('btn').disabled = $('source').disabled = false;
+    refresh();
     return;
   }
-  setSpeaker();
-  buf = new Float32Array(analyser.fftSize);
+  audioCtx = ctx; analyser = an; spkGain = spk; synth = sy; stream = st;
+  buf = new Float32Array(an.fftSize);
+  autoG = 4;
   lastFreqTime = 0;
+  starting = false;
+  $('btn').disabled = $('source').disabled = false;
+  setSpeaker();
   rafId = requestAnimationFrame(loop);
   refresh();
 }
@@ -550,6 +588,16 @@ $('pitch').addEventListener('change', () => { if (synth) synth.setFreq(pitch());
 $('speaker').addEventListener('change', setSpeaker);
 $('theme').addEventListener('change', e => setTheme(e.target.value));
 $('snap').addEventListener('click', snapshot);
+$('autoGain').addEventListener('change', e => {
+  // Tắt tự động: thanh trượt giữ lại giá trị đang dùng để hình không nhảy
+  if (!e.target.checked) $('gain').value = Math.min(10, Math.max(0.5, Math.round(autoG * 2) / 2));
+  refresh();
+});
+const eggAudio = new Audio('assets/fumo.wav');   // easter egg: chỉ hiện ở theme FUMO
+$('egg').addEventListener('click', () => {
+  eggAudio.currentTime = 0;
+  eggAudio.play().catch(() => { $('msg').textContent = 'Không phát được âm thanh (thiếu assets/fumo.wav?).'; });
+});
 canvas.addEventListener('click', e => {
   if (!frozen) return;
   const r = canvas.getBoundingClientRect();

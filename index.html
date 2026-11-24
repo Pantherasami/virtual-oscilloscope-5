@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-Dao động ký ảo (Virtual Oscilloscope) v2.0.0-alpha.1
+Dao động ký ảo (Virtual Oscilloscope) v2.0.0-beta.1
 Copyright (C) 2026 Pantherasami
 
 This program is free software: you can redistribute it and/or modify
@@ -24,65 +24,75 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="card-main">
+  <main class="app">
     <header class="topbar">
       <div>
-        <div class="title-row"><h1>Virtual Oscilloscope</h1><span class="ver">v2.0.0-alpha.1</span></div>
+        <div class="title-row"><h1>Virtual Oscilloscope</h1><span class="ver">v2.0.0-beta.1</span></div>
         <p class="subtitle">Dao động ký ảo · Vật lý 11</p>
       </div>
       <div class="top-right">
         <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">Sẵn sàng</span></div>
-        <label class="control"><span>Giao diện</span>
+        <label class="inline"><span>Giao diện</span>
           <select id="theme"><option value="light">Light</option><option value="dark">Dark</option><option value="fumo">FUMO</option></select>
         </label>
       </div>
     </header>
 
-    <div class="scope-wrap">
-      <canvas id="scope" width="1000" height="640"></canvas>
-      <div class="hud-top-left" id="hudScale">5 ms/ô · 10×8 lưới</div>
-      <div class="hud-top-right" id="hudTrig">TRIGGER: —</div>
-    </div>
-    <p id="msg" role="alert"></p>
-
-    <section class="controls" aria-label="Bảng điều khiển">
-      <div class="round-btns">
-        <button id="btn" class="round rec"><span class="c"><img src="assets/record.png" alt=""></span><span id="btnLbl">Record</span></button>
-        <button id="freeze" class="round pause" disabled><span class="c"><img src="assets/pause.png" alt=""></span><span id="freezeLbl">Pause</span></button>
-      </div>
-      <div class="group test">
-        <div class="gh"><img src="assets/fumo-small.png" alt=""><span>Test</span></div>
-        <div class="row">
-          <label class="control"><span>Nguồn</span>
-            <select id="source"><option value="mic">Micro</option><option value="sine">Âm sine</option><option value="flute">Sáo</option><option value="guitar">Guitar</option><option value="voice">Giọng /a/</option></select></label>
-          <label class="control"><span>Cao độ</span><select id="pitch"><option value="100">100 Hz</option><option value="200">200 Hz</option><option value="440" selected>440 Hz</option><option value="261.63">C4 (261.6 Hz)</option><option value="293.66">D4</option><option value="329.63">E4</option><option value="349.23">F4</option><option value="392">G4</option><option value="440">A4 (440 Hz)</option><option value="493.88">B4</option><option value="523.25">C5 (523.3 Hz)</option></select></label>
-          <label class="control"><input id="speaker" type="checkbox"><span>Phát ra loa</span></label>
+    <div class="layout">
+      <div class="main-col">
+        <div class="scope-wrap">
+          <canvas id="scope" width="1000" height="640"></canvas>
+          <div class="hud-top-left" id="hudScale">5 ms/ô · 10×8 lưới</div>
+          <div class="hud-top-right" id="hudTrig">TRIGGER: —</div>
         </div>
+        <p id="msg" role="alert"></p>
+
+        <div class="transport">
+          <button id="btn" class="round rec"><span class="c"><img src="assets/record.png" alt=""></span><span id="btnLbl">Record</span></button>
+          <button id="freeze" class="round pause" disabled><span class="c"><img src="assets/pause.png" alt=""></span><span id="freezeLbl">Pause</span></button>
+          <button id="egg" class="egg" type="button" aria-label="Fumo" title="?"><img src="assets/fumo-small.png" alt=""></button>
+        </div>
+
+        <section class="readout" aria-label="Thông số đo đạc">
+          <div class="card"><span class="k">Tần số cơ bản (f)</span><span class="v"><b id="freq">—</b> <small>Hz</small></span><span class="sub" id="clarityInfo">Độ rõ sóng: —</span></div>
+          <div class="card"><span class="k">Chu kỳ (T = 1000 / f)</span><span class="v"><b id="period">—</b> <small>ms</small></span><span class="sub">Tính song song theo f</span></div>
+          <div class="card"><span class="k">1 chu kỳ trên lưới</span><span class="v"><b id="cells">—</b> <small>ô ngang</small></span><span class="sub" id="cellsFormula">T / (ms/ô)</span></div>
+          <div class="card"><span class="k">Trigger sườn lên (u = 0 ↑)</span><span class="v"><b id="trig">—</b></span><span class="sub" id="samplesPerDiv">— mẫu/ô</span></div>
+        </section>
       </div>
-      <div class="group">
-        <div class="row">
-          <label class="control"><span>Thang thời gian (ms/ô)</span>
-            <select id="scale"><option value="1">1 ms/ô</option><option value="2">2 ms/ô</option><option value="5" selected>5 ms/ô</option><option value="10">10 ms/ô</option><option value="20">20 ms/ô</option></select></label>
-          <label class="control"><span>Độ khuếch đại (biên độ)</span>
-            <input id="gain" type="range" min="0.5" max="10" step="0.5" value="4"><span id="gainVal" class="mono">4.0×</span></label>
+
+      <aside class="side-col">
+        <section class="panel">
+          <h2>Test · Nguồn âm</h2>
+          <div class="fields">
+            <label class="field wide"><span>Nguồn</span>
+              <select id="source"><option value="mic">Micro</option>
+              <optgroup label="Sóng cơ bản"><option value="sine">Sine</option><option value="square">Vuông</option><option value="triangle">Tam giác</option><option value="sawtooth">Răng cưa</option></optgroup>
+              <optgroup label="Nhạc cụ"><option value="flute">Sáo</option><option value="clarinet">Clarinet</option><option value="trumpet">Trumpet</option><option value="guitar">Guitar</option><option value="piano">Piano</option><option value="violin">Violin</option><option value="organ">Organ</option></optgroup>
+              <optgroup label="Giọng"><option value="voice">Giọng /a/</option></optgroup></select></label>
+            <label class="field wide"><span>Cao độ</span><select id="pitch"><optgroup label="Tần số cố định"><option value="100">100 Hz</option><option value="200">200 Hz</option></optgroup><optgroup label="Nốt nhạc"><option value="130.81">Do3 (C3) – 130.8 Hz</option><option value="146.83">Re3 (D3) – 146.8 Hz</option><option value="164.81">Mi3 (E3) – 164.8 Hz</option><option value="174.61">Fa3 (F3) – 174.6 Hz</option><option value="196.00">Sol3 (G3) – 196.0 Hz</option><option value="220.00">La3 (A3) – 220.0 Hz</option><option value="246.94">Si3 (B3) – 246.9 Hz</option><option value="261.63">Do4 (C4) – 261.6 Hz</option><option value="293.66">Re4 (D4) – 293.7 Hz</option><option value="329.63">Mi4 (E4) – 329.6 Hz</option><option value="349.23">Fa4 (F4) – 349.2 Hz</option><option value="392.00">Sol4 (G4) – 392.0 Hz</option><option value="440.00" selected>La4 (A4) – 440.0 Hz</option><option value="493.88">Si4 (B4) – 493.9 Hz</option><option value="523.25">Do5 (C5) – 523.3 Hz</option><option value="587.33">Re5 (D5) – 587.3 Hz</option><option value="659.26">Mi5 (E5) – 659.3 Hz</option><option value="698.46">Fa5 (F5) – 698.5 Hz</option><option value="783.99">Sol5 (G5) – 784.0 Hz</option><option value="880.00">La5 (A5) – 880.0 Hz</option><option value="987.77">Si5 (B5) – 987.8 Hz</option><option value="1046.50">Do6 (C6) – 1046.5 Hz</option></optgroup></select></label>
+            <label class="check wide"><input id="speaker" type="checkbox"><span>Phát ra loa</span></label>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Thang đo</h2>
+          <div class="fields">
+            <label class="field wide"><span>Thang thời gian (ms/ô)</span>
+              <select id="scale"><option value="1">1 ms/ô</option><option value="2">2 ms/ô</option><option value="5" selected>5 ms/ô</option><option value="10">10 ms/ô</option><option value="20">20 ms/ô</option></select></label>
+            <label class="check wide"><input id="autoGain" type="checkbox" checked><span>Tự động chỉnh biên độ</span></label>
+            <label class="field wide"><span>Độ khuếch đại (biên độ): <b id="gainVal" class="mono">4.0×</b></span>
+              <input id="gain" type="range" min="0.5" max="10" step="0.5" value="4"></label>
+          </div>
           <button id="snap" class="tbtn" type="button">Lưu ảnh PNG</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="readout" aria-label="Thông số đo đạc">
-      <div class="card"><span class="k">Tần số cơ bản (f)</span><span class="v"><b id="freq">—</b> <small>Hz</small></span><span class="sub" id="clarityInfo">Độ rõ sóng: —</span></div>
-      <div class="card"><span class="k">Chu kỳ (T = 1000 / f)</span><span class="v"><b id="period">—</b> <small>ms</small></span><span class="sub">Tính song song theo f</span></div>
-      <div class="card"><span class="k">Độ rộng 1 chu kỳ trên lưới</span><span class="v"><b id="cells">—</b> <small>ô ngang</small></span><span class="sub" id="cellsFormula">T / (ms/ô)</span></div>
-      <div class="card"><span class="k">Trigger sườn lên (u = 0 ↑)</span><span class="v"><b id="trig">—</b></span><span class="sub" id="samplesPerDiv">— mẫu/ô</span></div>
-    </section>
-
-    <p id="info" class="info-bar">Chọn nguồn (micro hoặc âm mẫu) rồi bấm Record.</p>
+        </section>
+        <p id="info" class="info-bar">Chọn nguồn (micro hoặc âm mẫu) rồi bấm Record.</p>
+      </aside>
+    </div>
 
     <footer class="site-footer">
       <p>Copyright (C) 2026 Pantherasami</p>
       <p>Phần mềm tự do, phát hành theo <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GNU GPL v3.0</a>, không kèm bảo đảm nào ·
-        <a href="https://github.com/Pantherasami/virtual-oscilloscope-5" target="_blank" rel="noopener">Mã nguồn</a> · v2.0.0-alpha.1</p>
+        <a href="https://github.com/Pantherasami/virtual-oscilloscope-5" target="_blank" rel="noopener">Mã nguồn</a> · v2.0.0-beta.1</p>
     </footer>
   </main>
   <script src="script.js"></script>

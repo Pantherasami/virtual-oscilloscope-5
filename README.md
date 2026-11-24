@@ -256,17 +256,17 @@ Bản quyền (C) 2026 Pantherasami.
 
 ---
 
-## v2.0.0-alpha.2
+## v2.0.0-beta.1
 
-- **VI:** Giao diện "Virtual Oscilloscope" với 3 chế độ **Light / Dark / FUMO** (nền `#c4dadb`); đồ thị ưu tiên lưới 10×8; âm mẫu (sine 100/200/440 Hz, nốt C4–C5, sáo, guitar, giọng /a/) có thể phát ra loa; hiển thị độ tin cậy phép đo (quá nhỏ / chu kỳ yếu / đã khóa); khi Freeze bấm vào đồ thị để đặt con trỏ A/B đo Δ; nút **Lưu ảnh PNG**.
-- **EN:** "Virtual Oscilloscope" UI with **Light / Dark / FUMO** themes, built-in test tones and instrument samples (optionally routed to the speaker), measurement-reliability cues, A/B cursors while frozen, and PNG snapshot.
+- **VI:** bố cục mới (đồ thị bên trái, bảng điều khiển bên phải trên máy tính; xếp dọc trên điện thoại); 3 giao diện **Light / Dark / FUMO**; **tự động chỉnh biên độ** (bật/tắt); âm mẫu mở rộng: sóng sine/vuông/tam giác/răng cưa, sáo, clarinet, trumpet, guitar, piano, violin, organ, giọng /a/, nốt Do–Si (C3–C6) và 100/200 Hz; con trỏ A/B khi Freeze; lưu ảnh PNG; ở giao diện FUMO bấm vào hình nhân vật để phát âm thanh (easter egg).
+- **EN:** new layout, Light/Dark/FUMO themes, optional auto-amplitude, many more test timbres and the notes Do–Si (C3–C6), A/B cursors while frozen, PNG snapshot, and a FUMO-only easter egg. See `CHANGELOG.md` for the bugs found and fixed.
 
 | File | Vai trò / Role |
 |---|---|
-| `index.html` | Giao diện / page layout |
-| `style.css` | Giao diện Light / Dark / FUMO / themes and layout |
-| `script.js` | Một tệp, chia khối theo thứ tự: DSP (NSDF, parabol, trigger) → âm mẫu → vẽ canvas → trạng thái và DOM / one file, sections in order: DSP → samples → canvas → state and DOM |
-| `assets/` | `record.png`, `pause.png`, `fumo-small.png` |
+| `index.html` | Bố cục / page layout |
+| `style.css` | Giao diện và 3 theme / layout and themes |
+| `script.js` | DSP → âm mẫu → vẽ canvas → trạng thái và DOM / DSP → samples → canvas → state and DOM |
+| `assets/` | `record.png`, `pause.png`, `fumo-small.png`, `fumo.wav` |
 
-Dùng script thường (không ES module) nên mở được từ `file://`; micro vẫn cần `localhost` hoặc HTTPS. / Plain script (no ES modules); the microphone still needs `localhost` or HTTPS.
+Micro cần `localhost` hoặc HTTPS; âm mẫu dùng được cả khi mở từ `file://`. / The microphone needs `localhost` or HTTPS; test sounds also work from `file://`.
 
