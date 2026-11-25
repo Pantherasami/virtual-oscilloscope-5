@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-Dao động ký ảo (Virtual Oscilloscope) v2.0.0-beta.3
+Dao động ký ảo (Virtual Oscilloscope) v2.0.0
 Copyright (C) 2026 Pantherasami
 
 This program is free software: you can redistribute it and/or modify
@@ -27,7 +27,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
   <main class="app">
     <header class="topbar">
       <div>
-        <div class="title-row"><h1>Virtual Oscilloscope</h1><span class="ver">v2.0.0-beta.3</span></div>
+        <div class="title-row"><h1>Virtual Oscilloscope</h1><span class="ver">v2.0.0</span></div>
         <p class="subtitle" data-i18n="subtitle"></p>
       </div>
       <div class="top-right">
@@ -59,7 +59,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           <div class="card"><span class="k" data-i18n="kNote"></span><span class="v"><b id="noteName">—</b></span><span class="sub" id="noteSub">—</span></div>
           <div class="card"><span class="k" data-i18n="kCells"></span><span class="v"><b id="cells">—</b> <small data-i18n="uCells"></small></span><span class="sub" id="cellsFormula"></span></div>
           <div class="card"><span class="k" data-i18n="kTrig"></span><span class="v"><b id="trig">—</b></span><span class="sub" id="samplesPerDiv"></span></div>
-          <div class="card"><span class="k" data-i18n="kMan"></span><span class="v"><b id="manF">—</b> <small>Hz</small></span><span class="sub" id="manSub"></span>
+          <div class="card" id="manCard"><span class="k" data-i18n="kMan"></span><span class="v"><b id="manF">—</b> <small>Hz</small></span><span class="sub" id="manSub"></span>
             <label class="nrow"><span data-i18n="lblN"></span><input id="nCyc" type="number" min="1" max="50" step="1" value="1"></label></div>
         </section>
 
@@ -95,6 +95,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
             <label class="field wide" id="fileRow" hidden><span data-i18n="fFile"></span><input id="fileIn" type="file" accept=".wav,.mp3,audio/*"></label>
             <label class="field wide"><span data-i18n="fPitch"></span><select id="pitch"></select></label>
             <label class="check wide"><input id="speaker" type="checkbox"><span data-i18n="chkSpk"></span></label>
+            <label class="field wide"><span><span data-i18n="fVol"></span>: <b id="volVal" class="mono">50%</b></span>
+              <input id="volume" type="range" min="0" max="100" step="1" value="50"></label>
+            <div class="player wide" id="player" hidden>
+              <button id="playBtn" class="tbtn" type="button"></button>
+              <span id="timeLbl" class="mono">0:00 / 0:00</span>
+              <input id="seek" type="range" min="0" max="1000" step="1" value="0">
+            </div>
           </div>
         </section>
         <section class="panel">
@@ -102,6 +109,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           <div class="fields">
             <label class="field wide"><span data-i18n="fView"></span>
               <select id="view"><option value="time" data-i18n="vTime"></option><option value="spec" data-i18n="vSpec"></option></select></label>
+            <label class="field wide"><span data-i18n="fMeasure"></span>
+              <select id="measure"><option value="auto" data-i18n="mAuto"></option><option value="manual" data-i18n="mManual"></option></select></label>
             <label class="field wide"><span data-i18n="fScale"></span>
               <select id="scale"><option value="1"></option><option value="2"></option><option value="5" selected></option><option value="10"></option><option value="20"></option></select></label>
             <label class="check wide"><input id="autoGain" type="checkbox" checked><span data-i18n="chkAuto"></span></label>

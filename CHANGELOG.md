@@ -1,5 +1,29 @@
 # Changelog
 
+## v2.0.0 — bản chính thức / official release
+
+Gộp toàn bộ v2.0.0-beta.1 → beta.4 (xem các mục bên dưới) và thêm:
+
+### Thêm / Added
+- **Thanh âm lượng loa** (0–100%, lưu trong trình duyệt). Chỉ đổi âm thanh nghe được, đồ thị lấy tín hiệu trước bộ chỉnh nên không đổi; áp dụng cho âm mẫu, file và tiếng Fumo.
+- **Trình phát cho nguồn file `.wav/.mp3`** kiểu web nghe nhạc: nút **Phát / Tạm dừng phát**, **thanh tua** kéo được, hiển thị thời gian `m:ss / m:ss`, file vẫn phát lặp. Kéo thanh chỉ cập nhật số, thả tay mới tua thật; tua khi đang tạm dừng thì giữ nguyên trạng thái dừng; vẫn cập nhật khi đồ thị đang Freeze. Chọn nguồn file tự bật "Phát ra loa" để nghe được.
+- Viết lại `README.md` cho đúng v2 (trước đó phần hướng dẫn còn mô tả v1.1.0).
+
+### Đã kiểm tra / Verified
+- 67 kiểm tra luồng bằng giả lập (gồm âm lượng 0/50/100%, đồ thị lấy tín hiệu trước nút âm lượng, tua tới 30 s / 15 s, tạm dừng–tiếp tục giữ vị trí, thời gian không chạy khi tạm dừng, thanh tua vẫn chạy khi Freeze). Tần số: 1020 phép thử mô phỏng, sai số lớn nhất ở 200–1000 Hz là 0,58%.
+- **Chưa thử trên trình duyệt và thiết bị thật** — nên chạy thử Chrome/Edge, Firefox và một điện thoại (HTTPS) trước khi nộp.
+
+## v2.0.0-beta.4
+
+### Thêm / Added
+- **Tùy chọn "Cách đo chu kỳ": Tự động / Đo tay** (ô trong bảng Thang đo, lưu trong trình duyệt).
+  - *Tự động*: f, T, số ô và nốt nhạc lấy từ phần mềm (NSDF), có vạch gióng 1T; thẻ "Đo tay" được ẩn.
+  - *Đo tay*: Tạm dừng rồi bấm 2 điểm A, B; T = Δt/n, f = n/Δt hiện ở các thẻ chính và thẻ "Đo tay"; ẩn vạch 1T để học sinh tự đo. Bảng đo kiểm định vẫn ghi f phần mềm, và ghi thêm f đo tay khi ở chế độ này.
+- **Bấm hình Fumo tự động Freeze** đúng lúc tiếng to nhất (cửa sổ 50 ms có năng lượng lớn nhất), để đồ thị đứng yên và hiện rõ dạng sóng; bấm lại để phát và dừng hình lần nữa, bấm Tiếp tục để thả ra.
+
+### Đã kiểm tra / Verified
+- 48 kiểm tra luồng bằng giả lập (gồm Fumo tự Freeze, phát lại, chuyển chế độ đo, tính f/T từ con trỏ: 100 px ↔ 5 ms → 200 Hz, n = 2 → 400 Hz). Chưa thử trên trình duyệt và thiết bị thật.
+
 ## v2.0.0-beta.3
 
 ### Thêm / Added
