@@ -1,5 +1,5 @@
 /*
-Dao động ký ảo (Virtual Oscilloscope) v2.0.0-beta.1
+Dao động ký ảo (Virtual Oscilloscope) v2.0.0-beta.3
 Copyright (C) 2026 Pantherasami
 
 This program is free software: you can redistribute it and/or modify
@@ -17,10 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
 'use strict';
+
 // dsp.js – NSDF + nội suy parabol + trigger sườn lên (không đụng DOM)
 const MIN_RMS = 0.008;            // Ngưỡng im lặng
 const AC_WINDOW = 4096;           // Cửa sổ tự tương quan (mẫu)
-const AC_MAXLAG = 2048;           // Độ trễ tối đa (~23.4 Hz ở 48 kHz)
+const AC_MAXLAG = 2048;           // Độ trễ tối đa (mẫu); thực tế còn bị giới hạn bởi sampleRate / F_MIN
 const F_MIN = 40;                 // Tần số đo tối thiểu (Hz)
 const F_MAX = 2500;               // Tần số đo tối đa (Hz)
 const CLARITY_MIN = 0.52;         // Ngưỡng độ rõ tuần hoàn tối thiểu
@@ -185,6 +186,152 @@ function makeSynth(ctx, kind, freq) {
   };
 }
 
+// Giải mã .wav/.mp3 theo tần số lấy mẫu của AudioContext (dạng callback để Safari cũ vẫn chạy)
+const decode = (ctx, data) => new Promise((ok, fail) => ctx.decodeAudioData(data, ok, fail));
+
+// Nguồn từ file âm thanh (.wav/.mp3): giải mã theo tần số lấy mẫu của AudioContext rồi phát lặp
+async function makeFileSource(ctx, data) {
+  const audio = await decode(ctx, data);
+  const src = ctx.createBufferSource();
+  const out = ctx.createGain();
+  src.buffer = audio;
+  src.loop = true;
+  src.connect(out);
+  src.start();
+  return {
+    out,
+    setFreq() {},
+    stop() { try { src.stop(); } catch (e) { /* đã dừng */ } src.disconnect(); }
+  };
+}
+
+// i18n.js – Tiếng Việt / English
+let lang = 'vi';
+const I18N = {
+  subtitle: ['Dao động ký ảo · Vật lý 11', 'Virtual oscilloscope · Physics 11'],
+  lblLang: ['Ngôn ngữ', 'Language'],
+  lblTheme: ['Giao diện', 'Theme'],
+  stReady: ['Sẵn sàng', 'Ready'],
+  stRun: ['Đang thu (Run)', 'Running'],
+  stFreeze: ['Dừng hình (Freeze)', 'Frozen'],
+  bRec: ['Thu âm', 'Record'],
+  bStop: ['Dừng', 'Stop'],
+  bPause: ['Tạm dừng', 'Pause'],
+  bResume: ['Tiếp tục', 'Resume'],
+  kFreq: ['Tần số cơ bản (f)', 'Fundamental frequency (f)'],
+  kPeriod: ['Chu kỳ (T = 1000 / f)', 'Period (T = 1000 / f)'],
+  kNote: ['Nốt nhạc gần nhất', 'Nearest note'],
+  kCells: ['1 chu kỳ trên lưới', 'One period on the grid'],
+  kTrig: ['Trigger sườn lên (u = 0 ↑)', 'Rising-edge trigger (u = 0 ↑)'],
+  kMan: ['Đo tay A–B', 'Manual A–B'],
+  lblN: ['Số chu kỳ n giữa A và B', 'Cycles n between A and B'],
+  uCells: ['ô ngang', 'divisions'],
+  subPar: ['Tính song song theo f', 'Computed from f'],
+  cellsF: ['T / (ms/ô)', 'T / (ms/div)'],
+  cellUnit: ['ô', 'div'],
+  msDiv: ['ms/ô', 'ms/div'],
+  clIdle: ['Độ rõ sóng: —', 'Clarity: —'],
+  clRange: ['Chu kỳ yếu (ngoài vùng 40–2500 Hz)', 'Weak periodicity (outside 40–2500 Hz)'],
+  clQuiet: ['Tín hiệu quá nhỏ – tăng âm lượng hoặc độ khuếch đại', 'Signal too quiet – raise the volume or gain'],
+  clWeak: ['Chu kỳ yếu – độ rõ NSDF {p}%', 'Weak periodicity – NSDF clarity {p}%'],
+  clOk: ['Đã khóa – độ rõ NSDF {p}%', 'Locked – NSDF clarity {p}%'],
+  noteSub: ['{c} cent · chuẩn {f} Hz', '{c} cents · reference {f} Hz'],
+  trLock: ['Đã khóa (u=0 ↑)', 'Locked (u=0 ↑)'],
+  trFree: ['Tự do', 'Free'],
+  hLock: ['TRIGGER: KHÓA SƯỜN LÊN ↑', 'TRIGGER: LOCKED ↑'],
+  hFrozen: ['TRIGGER: KHÓA (DỪNG HÌNH)', 'TRIGGER: LOCKED (FROZEN)'],
+  hWait: ['TRIGGER: CHỜ TÍN HIỆU', 'TRIGGER: WAITING'],
+  hIdle: ['TRIGGER: —', 'TRIGGER: —'],
+  hGridIdle: ['{ms} ms/ô · lưới 10×8', '{ms} ms/div · 10×8 grid'],
+  hGrid: ['{ms} ms/ô · {spd} mẫu/ô · {g}×', '{ms} ms/div · {spd} samples/div · {g}×'],
+  hSpec: ['Phổ FFT · Δf = {df} Hz', 'FFT spectrum · Δf = {df} Hz'],
+  spdSub: ['{spd} mẫu/ô · {sr} Hz · Δt = {dt} ms', '{spd} samples/div · {sr} Hz · Δt = {dt} ms'],
+  spdIdle: ['— mẫu/ô', '— samples/div'],
+  manHint: ['Freeze rồi bấm 2 điểm trên đồ thị', 'Freeze, then click two points on the scope'],
+  manSub: ['Δt = {dt} ms · T = Δt/{n} = {T} ms', 'Δt = {dt} ms · T = Δt/{n} = {T} ms'],
+  iIdle: ['Chọn nguồn (micro, âm mẫu hoặc file) rồi bấm Thu âm.', 'Choose a source (microphone, test sound or file), then press Record.'],
+  iRun: ['Nguồn: {src} · Tần số lấy mẫu thực tế: {sr} Hz · {ms} ms/ô ({spd} mẫu/ô)', 'Source: {src} · Actual sample rate: {sr} Hz · {ms} ms/div ({spd} samples/div)'],
+  iCur: [' · Bấm vào đồ thị để đặt con trỏ A/B.', ' · Click the scope to place cursors A/B.'],
+  eFile: ['Trình duyệt chặn micro khi mở trực tiếp file://. Hãy chạy qua localhost hoặc HTTPS (âm mẫu vẫn dùng được).', 'The browser blocks the microphone on file://. Use localhost or HTTPS (test sounds still work).'],
+  eStart: ['Không thể khởi động nguồn âm: {m}', 'Cannot start the audio source: {m}'],
+  eNoFile: ['Hãy chọn một file âm thanh (.wav/.mp3) trước.', 'Choose an audio file (.wav/.mp3) first.'],
+  eDecode: ['Không đọc được file âm thanh này.', 'Cannot decode this audio file.'],
+  eSnap: ['Không thể lưu ảnh (mở qua http://localhost hoặc HTTPS): {m}', 'Cannot save the image (open via http://localhost or HTTPS): {m}'],
+  eEgg: ['Không phát được âm thanh (thiếu assets/fumo.wav?).', 'Cannot play the sound (missing assets/fumo.wav?).'],
+  eEggGraph: ['Không nạp được assets/fumo.wav để hiện lên đồ thị (hãy mở qua localhost hoặc HTTPS). Đã phát âm thanh thường.', 'Cannot load assets/fumo.wav for the scope (open via localhost or HTTPS). Played as plain audio.'],
+  eSecure: ['Trình duyệt chỉ cho dùng micro qua HTTPS hoặc localhost. Hãy mở trang bằng địa chỉ https://… (âm mẫu vẫn dùng được).', 'The browser only allows the microphone over HTTPS or localhost. Open the page via https://… (test sounds still work).'],
+  eDenied: ['Quyền micro đang bị chặn. Bấm biểu tượng ổ khóa cạnh thanh địa chỉ để cho phép lại.', 'Microphone permission is blocked. Use the padlock icon next to the address bar to allow it.'],
+  eNoMic: ['Không tìm thấy micro trên thiết bị này.', 'No microphone was found on this device.'],
+  srcFumo: ['Fumo (bấm hình)', 'Fumo (click the figure)'],
+  eggTip: ['Bấm để phát tiếng Fumo lên đồ thị', 'Click to play the Fumo sound on the scope'],
+  langTip: ['Tiếng Việt · bấm để chuyển sang English', 'English · click to switch to Tiếng Việt'],
+  eNoF: ['Chưa có tần số hợp lệ để ghi.', 'No valid frequency to log yet.'],
+  pTest: ['Test · Nguồn âm', 'Test · Sound source'],
+  fSource: ['Nguồn', 'Source'],
+  srcMic: ['Micro', 'Microphone'],
+  srcFile: ['Mở file âm thanh (.wav/.mp3)', 'Open audio file (.wav/.mp3)'],
+  gBasic: ['Sóng cơ bản', 'Basic waves'],
+  sSine: ['Sine', 'Sine'],
+  sSquare: ['Vuông', 'Square'],
+  sTri: ['Tam giác', 'Triangle'],
+  sSaw: ['Răng cưa', 'Sawtooth'],
+  gInst: ['Nhạc cụ', 'Instruments'],
+  iFlute: ['Sáo', 'Flute'],
+  iClar: ['Clarinet', 'Clarinet'],
+  iTrump: ['Trumpet', 'Trumpet'],
+  iGuit: ['Guitar', 'Guitar'],
+  iPiano: ['Piano', 'Piano'],
+  iViolin: ['Violin', 'Violin'],
+  iOrgan: ['Organ', 'Organ'],
+  gVoice: ['Giọng', 'Voice'],
+  sVoice: ['Giọng /a/', 'Voice /a/'],
+  fPitch: ['Cao độ', 'Pitch'],
+  gFixed: ['Tần số cố định', 'Fixed frequency'],
+  gGuitar: ['Dây đàn guitar chuẩn', 'Standard guitar strings'],
+  gString: ['Dây', 'String'],
+  gNotes: ['Nốt nhạc (quãng 3–5, thêm Đô6)', 'Notes (octaves 3–5, plus C6)'],
+  chkSpk: ['Phát ra loa', 'Play through speaker'],
+  fFile: ['File âm thanh', 'Audio file'],
+  pScale: ['Thang đo', 'Scale'],
+  fView: ['Chế độ xem', 'View'],
+  vTime: ['Đồ thị u(t)', 'Waveform u(t)'],
+  vSpec: ['Phổ FFT', 'FFT spectrum'],
+  fScale: ['Thang thời gian (ms/ô)', 'Time base (ms/div)'],
+  chkAuto: ['Tự động chỉnh biên độ', 'Auto amplitude'],
+  fGain: ['Độ khuếch đại (biên độ)', 'Gain (amplitude)'],
+  autoTag: [' (tự động)', ' (auto)'],
+  uHint: ['u: li độ, đơn vị tương đối (mẫu chuẩn hóa trong [−1; 1]).', 'u: displacement in relative units (samples normalized to [−1, 1]).'],
+  bSnap: ['Lưu ảnh PNG', 'Save PNG'],
+  pLog: ['Bảng đo kiểm định · δ = |f_đo − f_chuẩn| / f_chuẩn × 100%', 'Verification log · δ = |f_meas − f_ref| / f_ref × 100%'],
+  fRef: ['Tần số chuẩn (Hz)', 'Reference frequency (Hz)'],
+  bAdd: ['Ghi lần đo', 'Log measurement'],
+  bClear: ['Xóa bảng', 'Clear'],
+  bCsv: ['Tải CSV', 'Download CSV'],
+  thNo: ['STT', '#'],
+  thSrc: ['Nguồn', 'Source'],
+  thRef: ['f chuẩn (Hz)', 'f ref (Hz)'],
+  thSoft: ['f phần mềm (Hz)', 'f software (Hz)'],
+  thDS: ['δ (%)', 'δ (%)'],
+  thHand: ['f đo tay (Hz)', 'f manual (Hz)'],
+  thDH: ['δ tay (%)', 'δ manual (%)'],
+  lgEmpty: ['Chưa có lần đo nào. Nên đo ít nhất 3 lần cho mỗi nguồn chuẩn.', 'No measurements yet. Take at least 3 per reference source.'],
+  lgNoRef: ['Nhập tần số chuẩn để tính sai số δ.', 'Enter a reference frequency to compute the error δ.'],
+  lgSum: ['f_tb ({n} lần, f chuẩn = {r} Hz) = {f} Hz · δ = {d}% · {ok}', 'f_avg ({n} runs, f ref = {r} Hz) = {f} Hz · δ = {d}% · {ok}'],
+  lgOk: ['Đạt (≤ 5%)', 'Pass (≤ 5%)'],
+  lgNo: ['Chưa đạt (> 5%)', 'Not yet (> 5%)'],
+  snapTxt: ['f = {f} Hz · T = {T} ms · {c} ô/chu kỳ · {ms} ms/ô · {time}', 'f = {f} Hz · T = {T} ms · {c} div/period · {ms} ms/div · {time}'],
+  ftLic: [
+    'Copyright (C) 2026 Pantherasami<br>Phần mềm tự do, phát hành theo <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GNU GPL v3.0</a>, không kèm bảo đảm nào · <a href="https://github.com/Pantherasami/virtual-oscilloscope-5" target="_blank" rel="noopener">Mã nguồn</a> · v2.0.0-beta.3',
+    'Copyright (C) 2026 Pantherasami<br>Free software released under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">GNU GPL v3.0</a>, with no warranty · <a href="https://github.com/Pantherasami/virtual-oscilloscope-5" target="_blank" rel="noopener">Source code</a> · v2.0.0-beta.3'
+  ]
+};
+
+function t(key, vars) {
+  const pair = I18N[key] || [key, key];
+  const text = pair[lang === 'vi' ? 0 : 1];
+  return vars ? text.replace(/\{(\w+)\}/g, (_, n) => (n in vars ? vars[n] : '')) : text;
+}
+
 // scope.js – vẽ lưới 10×8, sóng, 1T, con trỏ (chỉ canvas, không đụng DOM khác)
 const COLS = 10;
 const ROWS = 8;
@@ -201,14 +348,14 @@ function readTheme() {
   COLOR_WAVE = v('--cvwave'); COLOR_TRIG = v('--cvtrig'); COLOR_PERIOD_GUIDE = v('--cvguide'); COLOR_LABEL = v('--cvlabel');
 }
 
-function renderIdle(gain) {
+function renderIdle(gain, msDiv) {
   const W = canvas.width;
   const H = canvas.height;
-  drawGrid(W, H, gain);
+  drawGrid(W, H, gain, msDiv);
 }
 
 // ===== 3. Vẽ lưới dao động ký 10×8 & đồ thị sóng =====
-function drawGrid(W, H, gain) {
+function drawGrid(W, H, gain, msDiv) {
   FS = Math.max(1, W / (canvas.clientWidth || W) / 1.2);   // chữ không bị nhỏ trên màn hình hẹp
   ctx2d.fillStyle = COLOR_BG;
   ctx2d.fillRect(0, 0, W, H);
@@ -263,16 +410,31 @@ function drawGrid(W, H, gain) {
   for (let c = 1; c <= COLS; c++) {
     const x = (c * W) / COLS;
     ctx2d.textAlign = c === COLS ? 'right' : 'center';
-    ctx2d.fillText(String(c), c === COLS ? x - 6 : x, midY + 6 + 15 * FS);
+    ctx2d.fillText(String(Number((c * msDiv).toFixed(1))), c === COLS ? x - 6 : x, midY + 6 + 15 * FS);
   }
   ctx2d.textAlign = 'left';
   ctx2d.fillText('0', 8, midY + 6 + 15 * FS);
+  ctx2d.textAlign = 'right';
+  ctx2d.fillText('t (ms)', W - 6, midY - 8 * FS);
+  ctx2d.textAlign = 'left';
   const uq = (0.5 / gain).toPrecision(2);
-  ctx2d.fillText('+' + uq, 8, H / 4 - 6);
-  ctx2d.fillText('\u2212' + uq, 8, (3 * H) / 4 + 4 + 15 * FS);
+  ctx2d.fillText('u = +' + uq, 8, H / 4 - 6);
+  ctx2d.fillText('u = \u2212' + uq, 8, (3 * H) / 4 + 4 + 15 * FS);
 }
 
-function renderScope({ x, sr, res, msDiv, gain, cursors }) {
+let dcBuf = null;
+// Bỏ thành phần một chiều (DC) của micro để trigger u = 0 và đường vẽ không bị lệch khỏi trục
+function removeDc(x) {
+  if (!dcBuf || dcBuf.length !== x.length) dcBuf = new Float32Array(x.length);
+  let m = 0;
+  for (let i = 0; i < x.length; i++) m += x[i];
+  m /= x.length;
+  for (let i = 0; i < x.length; i++) dcBuf[i] = x[i] - m;
+  return dcBuf;
+}
+
+function renderScope({ x, sr, res, msDiv, gain, cursors, nCyc }) {
+  x = removeDc(x);
   const W = canvas.width;
   const H = canvas.height;
 
@@ -281,7 +443,7 @@ function renderScope({ x, sr, res, msDiv, gain, cursors }) {
   // Chặn biên: không bao giờ đọc vượt quá bộ đệm (vd. sampleRate quá cao + 20 ms/ô)
   const totalSamples = Math.min(samplesPerDiv * COLS, x.length - 3);
 
-  drawGrid(W, H, gain);
+  drawGrid(W, H, gain, msDiv);
 
   const rmsNow = computeRms(x, x.length - totalSamples, totalSamples);
   const trigPos = findRisingZeroCrossing(x, totalSamples, rmsNow);
@@ -312,7 +474,7 @@ function renderScope({ x, sr, res, msDiv, gain, cursors }) {
       ctx2d.stroke();
 
       // Nhãn đặt sát đáy để không đè lên HUD ở góc trên
-      const label = `1T = ${cells.toFixed(2)} ô`;
+      const label = `1T = ${cells.toFixed(2)} ${t('cellUnit')}`;
       ctx2d.fillStyle = COLOR_TRIG;
       ctx2d.font = `${16 * FS}px system-ui, sans-serif`;
       const tw = ctx2d.measureText(label).width;
@@ -355,24 +517,161 @@ function renderScope({ x, sr, res, msDiv, gain, cursors }) {
       ctx2d.fillText(i ? 'B' : 'A', cx + 4, 60);
     });
     if (cursors.length === 2) {
-      const dc = (Math.abs(cursors[1] - cursors[0]) / W) * COLS;
-      const dt = dc * msDiv;
-      const t = `Δ = ${dc.toFixed(2)} ô = ${dt.toFixed(2)} ms → ${dt > 0 ? (1000 / dt).toFixed(1) : '—'} Hz`;
-      ctx2d.fillText(t, Math.min(cursors[0], cursors[1]) + 8, H - 52);
+      const dt = (Math.abs(cursors[1] - cursors[0]) / W) * COLS * msDiv;
+      const n = Math.max(1, nCyc || 1);
+      const txt = `Δt = ${dt.toFixed(2)} ms · n = ${n} → f = ${dt > 0 ? ((1000 * n) / dt).toFixed(1) : '—'} Hz`;
+      ctx2d.fillText(txt, 14, H - 52);
     }
     ctx2d.restore();
   }
   return { samplesPerDiv, locked };
 }
 
+// Phổ FFT (mở rộng): biên độ chuẩn hóa theo tần số, đánh dấu f₀ và các họa âm
+function renderSpectrum({ spec, sr, res }) {
+  const W = canvas.width;
+  const H = canvas.height;
+  FS = Math.max(1, W / (canvas.clientWidth || W) / 1.2);
+  ctx2d.fillStyle = COLOR_BG;
+  ctx2d.fillRect(0, 0, W, H);
+  const nb = spec.length;
+  const df = sr / 2 / nb;
+  const f0 = res && res.f ? res.f : 0;
+  const fMax = f0 ? Math.min(sr / 2, Math.max(1000, Math.ceil((f0 * 10) / 500) * 500)) : 2500;
+  const kMax = Math.min(nb - 1, Math.floor(fMax / df));
+  const mag = new Float32Array(kMax + 1);
+  let mx = 1e-12;
+  for (let k = 0; k <= kMax; k++) {
+    mag[k] = Math.pow(10, spec[k] / 20);
+    if (mag[k] > mx) mx = mag[k];
+  }
+  const top = 40 + 30 * FS;
+  const bot = H - 38 * FS;
+  const plotH = bot - top;
+  const step = [50, 100, 200, 250, 500, 1000, 2000].find(s => fMax / s <= 10) || 2000;
+
+  ctx2d.lineWidth = 1;
+  ctx2d.strokeStyle = COLOR_GRID;
+  ctx2d.beginPath();
+  for (let f = 0; f <= fMax; f += step) {
+    const x = (f / fMax) * W;
+    ctx2d.moveTo(x, top);
+    ctx2d.lineTo(x, bot);
+  }
+  for (let r = 0; r <= 4; r++) {
+    const y = bot - (r / 4) * plotH;
+    ctx2d.moveTo(0, y);
+    ctx2d.lineTo(W, y);
+  }
+  ctx2d.stroke();
+
+  ctx2d.strokeStyle = COLOR_AXIS;
+  ctx2d.lineWidth = 3;
+  ctx2d.beginPath();
+  ctx2d.moveTo(1.5, top - 10);
+  ctx2d.lineTo(1.5, bot);
+  ctx2d.lineTo(W, bot);
+  ctx2d.stroke();
+
+  ctx2d.fillStyle = COLOR_LABEL;
+  ctx2d.font = `${14 * FS}px system-ui, sans-serif`;
+  ctx2d.textAlign = 'center';
+  for (let f = step; f < fMax; f += step) ctx2d.fillText(String(f), (f / fMax) * W, bot + 16 * FS);
+  ctx2d.textAlign = 'right';
+  ctx2d.fillText('f (Hz)', W - 6, bot + 32 * FS);
+  ctx2d.textAlign = 'left';
+  ctx2d.fillText('A', 8, top + 14 * FS);
+
+  ctx2d.beginPath();
+  for (let k = 0; k <= kMax; k++) {
+    const x = (k / kMax) * W;
+    const y = bot - (mag[k] / mx) * plotH;
+    if (k === 0) ctx2d.moveTo(x, y);
+    else ctx2d.lineTo(x, y);
+  }
+  ctx2d.strokeStyle = COLOR_WAVE;
+  ctx2d.lineWidth = 2;
+  ctx2d.lineJoin = 'round';
+  ctx2d.stroke();
+  ctx2d.lineTo(W, bot);
+  ctx2d.lineTo(0, bot);
+  ctx2d.globalAlpha = 0.15;
+  ctx2d.fillStyle = COLOR_WAVE;
+  ctx2d.fill();
+  ctx2d.globalAlpha = 1;
+
+  if (f0) {
+    ctx2d.save();
+    ctx2d.setLineDash([6, 4]);
+    ctx2d.strokeStyle = ctx2d.fillStyle = COLOR_TRIG;
+    ctx2d.lineWidth = 1.5;
+    ctx2d.font = `${15 * FS}px system-ui, sans-serif`;
+    ctx2d.textAlign = 'center';
+    for (let h = 1; h * f0 <= fMax; h++) {
+      const x = ((h * f0) / fMax) * W;
+      ctx2d.beginPath();
+      ctx2d.moveTo(x, top);
+      ctx2d.lineTo(x, bot);
+      ctx2d.stroke();
+      ctx2d.fillText(h === 1 ? 'f₀' : h + 'f₀', x, top - 4);
+    }
+    ctx2d.restore();
+  }
+  return { df };
+}
+
 // main.js – trạng thái, nguồn âm, vòng lặp, DOM. Mọi thay đổi đều đi qua refresh().
 const FFT_SIZE = 32768;      // ~0.68 s ở 48 kHz, đủ cho 20 ms/ô × 10 ô
 const FREQ_EVERY_MS = 90;
+const MAX_LOG = 30;
 const $ = id => document.getElementById(id);
 
 let audioCtx = null, analyser = null, spkGain = null, synth = null, stream = null;
-let rafId = 0, buf = null, frozen = null, lastRes, lastFreqTime = 0, cursors = [];
-let autoG = 4, starting = false;
+let rafId = 0, buf = null, specBuf = null, frozen = null, lastRes, lastMan = null, lastFreqTime = 0, cursors = [];
+let autoG = 4, starting = false, fileData = null, fileName = '', refTouched = false;
+let runKind = '', eggSrc = null;   // runKind: nguồn đang chạy ('none' = chỉ có tiếng Fumo)
+const logRows = [];
+
+const pitch = () => Number($('pitch').value);
+const midiHz = m => 440 * Math.pow(2, (m - 69) / 12);
+const NOTE_VI = ['Đô', 'Đô#', 'Rê', 'Rê#', 'Mi', 'Fa', 'Fa#', 'Son', 'Son#', 'La', 'La#', 'Si'];
+const NOTE_EN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+function noteName(m) {
+  const o = Math.floor(m / 12) - 1;
+  const i = ((m % 12) + 12) % 12;
+  return lang === 'vi' ? `${NOTE_VI[i]}${o} (${NOTE_EN[i]}${o})` : `${NOTE_EN[i]}${o}`;
+}
+
+function noteInfo(f) {
+  const n = 69 + 12 * Math.log2(f / 440);
+  const m = Math.round(n);
+  return { name: noteName(m), cents: (n - m) * 100, hz: midiHz(m) };
+}
+
+const srcLabel = () => runKind === 'none' ? t('srcFumo')
+  : $('source').selectedOptions[0].text + ($('source').value === 'file' && fileName ? ` (${fileName})` : '');
+
+// Danh sách cao độ: tần số cố định, dây guitar chuẩn, nốt nhạc theo bảng tần số chuẩn (La4 = 440 Hz)
+function buildPitch() {
+  const sel = $('pitch');
+  const keep = sel.value || '440.00';
+  sel.textContent = '';
+  const group = (labelKey, items) => {
+    const g = document.createElement('optgroup');
+    g.dataset.i18nLabel = labelKey;
+    g.label = t(labelKey);
+    items.forEach(([text, value]) => g.appendChild(new Option(text, value)));
+    sel.appendChild(g);
+  };
+  group('gFixed', [100, 200, 1000].map(f => [`${f} Hz`, String(f)]));
+  group('gGuitar', [40, 45, 50, 55, 59, 64].map(m => [`${t('gString')} ${noteName(m)} – ${midiHz(m).toFixed(1)} Hz`, midiHz(m).toFixed(2)]));
+  const notes = [];
+  for (let m = 48; m <= 84; m++) notes.push([`${noteName(m)} – ${midiHz(m).toFixed(1)} Hz`, midiHz(m).toFixed(2)]);
+  group('gNotes', notes);
+  sel.value = keep;
+  if (sel.value !== keep) sel.value = '440.00';
+}
 
 // Độ khuếch đại tự động: đỉnh sóng (đã bỏ DC) trong phần đang hiển thị chiếm ~80% nửa chiều cao
 function autoTarget(x, sr, md) {
@@ -385,75 +684,92 @@ function autoTarget(x, sr, md) {
   return pk < 0.002 ? null : Math.min(50, Math.max(0.5, 0.8 / pk));
 }
 
-const pitch = () => Number($('pitch').value);
-
 function refresh() {
   const running = Boolean(audioCtx);
+  const spec = $('view').value === 'spec';
   const md = Number($('scale').value);
   const x = frozen ? frozen.data : buf;
   const sr = running ? (frozen ? frozen.sr : audioCtx.sampleRate) : 0;
   const auto = $('autoGain').checked;
   let g = Number($('gain').value);
   if (running && auto) {
-    const t = autoTarget(x, sr, md);
-    if (t !== null) autoG = frozen ? t : autoG + (t - autoG) * 0.25;   // Freeze: giá trị cố định, không trôi
+    const tg = autoTarget(x, sr, md);
+    if (tg !== null) autoG = frozen ? tg : autoG + (tg - autoG) * 0.25;   // Freeze: giá trị cố định, không trôi
     g = autoG;
   }
   $('gain').disabled = auto;
-  $('gainVal').textContent = g.toFixed(1) + '×' + (auto ? ' (tự động)' : '');
+  $('gainVal').textContent = g.toFixed(1) + '×' + (auto ? t('autoTag') : '');
+  const nCyc = Math.max(1, Math.round(Number($('nCyc').value) || 1));
 
   let info = null;
-  if (running) info = renderScope({ x, sr, res: lastRes, msDiv: md, gain: g, cursors: frozen ? cursors : [] });
-  else renderIdle(g);
+  if (running && spec) info = renderSpectrum({ spec: frozen ? frozen.spec : specBuf, sr, res: lastRes });
+  else if (running) info = renderScope({ x, sr, res: lastRes, msDiv: md, gain: g, cursors: frozen ? cursors : [], nCyc });
+  else renderIdle(g, md);
 
   // Trạng thái đồng bộ ở mọi nơi: pill, nút, HUD, thẻ đo
   const mode = !running ? 'idle' : frozen ? 'freeze' : 'run';
   $('statusDot').className = 'dot ' + (mode === 'idle' ? '' : mode);
-  $('statusText').textContent = { idle: 'Sẵn sàng', run: 'Đang thu (Run)', freeze: 'Dừng hình (Freeze)' }[mode];
+  $('statusText').textContent = t({ idle: 'stReady', run: 'stRun', freeze: 'stFreeze' }[mode]);
   $('btn').classList.toggle('on', running);
-  $('btnLbl').textContent = running ? 'Stop' : 'Record';
+  $('btnLbl').textContent = t(running ? 'bStop' : 'bRec');
   $('freeze').disabled = !running;
   $('freeze').classList.toggle('freeze-on', Boolean(frozen));
-  $('freezeLbl').textContent = frozen ? 'Resume' : 'Pause';
+  $('freezeLbl').textContent = t(frozen ? 'bResume' : 'bPause');
   document.querySelector('.scope-wrap').classList.toggle('is-frozen', Boolean(frozen));
 
-  const spd = info ? info.samplesPerDiv : 0;
-  $('hudScale').textContent = info ? `${md} ms/ô · ${spd.toFixed(1)} mẫu/ô · ${g.toFixed(1)}×` : `${md} ms/ô · 10×8 lưới`;
-  $('hudTrig').textContent = !info ? 'TRIGGER: —'
-    : info.locked ? (frozen ? 'TRIGGER: KHÓA (DỪNG HÌNH)' : 'TRIGGER: KHÓA SƯỜN LÊN ↑') : 'TRIGGER: CHỜ TÍN HIỆU';
+  const f = lastRes && lastRes.f ? lastRes.f : 0;
+  const T = f ? 1000 / f : 0;
+  const spd = running ? (sr * md) / 1000 : 0;
+  if (spec && info) {
+    $('hudScale').textContent = t('hSpec', { df: info.df.toFixed(2) });
+    $('hudTrig').textContent = f ? `f₀ = ${f.toFixed(1)} Hz` : 'FFT';
+  } else {
+    $('hudScale').textContent = running ? t('hGrid', { ms: md, spd: spd.toFixed(1), g: g.toFixed(1) }) : t('hGridIdle', { ms: md });
+    $('hudTrig').textContent = !info ? t('hIdle') : info.locked ? t(frozen ? 'hFrozen' : 'hLock') : t('hWait');
+  }
   $('hudTrig').classList.toggle('frozen', Boolean(frozen));
-  $('trig').textContent = info ? (info.locked ? 'Đã khóa (u=0 ↑)' : 'Tự do') : '—';
-  $('samplesPerDiv').textContent = info ? `${spd.toFixed(1)} mẫu/ô · ${sr} Hz` : '— mẫu/ô';
+  $('trig').textContent = info && !spec ? t(info.locked ? 'trLock' : 'trFree') : '—';
+  $('samplesPerDiv').textContent = running ? t('spdSub', { spd: spd.toFixed(1), sr, dt: (1000 / sr).toFixed(4) }) : t('spdIdle');
 
-  const ok = Boolean(lastRes && lastRes.f);
-  const T = ok ? 1000 / lastRes.f : 0;
-  $('freq').textContent = ok ? lastRes.f.toFixed(1) : '—';
-  $('period').textContent = ok ? T.toFixed(2) : '—';
-  $('cells').textContent = ok ? (T / md).toFixed(2) : '—';
-  $('cellsFormula').textContent = ok ? `${T.toFixed(2)} ms / ${md} ms/ô` : 'T / (ms/ô)';
+  $('freq').textContent = f ? f.toFixed(1) : '—';
+  $('period').textContent = f ? T.toFixed(2) : '—';
+  $('cells').textContent = f ? (T / md).toFixed(2) : '—';
+  $('cellsFormula').textContent = f ? `${T.toFixed(2)} ms / ${md} ${t('msDiv')}` : t('cellsF');
+  const ni = f ? noteInfo(f) : null;
+  $('noteName').textContent = ni ? ni.name : '—';
+  $('noteSub').textContent = ni ? t('noteSub', { c: (Math.round(ni.cents) > 0 ? '+' : '') + (Math.round(ni.cents) || 0), f: ni.hz.toFixed(2) }) : '—';
+
+  // Đo tay: khoảng cách A–B chia cho số chu kỳ n → T, f
+  lastMan = null;
+  if (frozen && !spec && cursors.length === 2) {
+    const dt = (Math.abs(cursors[1] - cursors[0]) / canvas.width) * COLS * md;
+    if (dt > 0) lastMan = { dt, T: dt / nCyc, f: (1000 * nCyc) / dt };
+  }
+  $('manF').textContent = lastMan ? lastMan.f.toFixed(1) : '—';
+  $('manSub').textContent = lastMan ? t('manSub', { dt: lastMan.dt.toFixed(2), n: nCyc, T: lastMan.T.toFixed(3) }) : t('manHint');
 
   // Độ tin cậy của phép đo
-  let st = ['idle', 'Độ rõ sóng: —'];
+  let st = ['idle', t('clIdle')];
   if (running && lastRes !== undefined) {
     const pct = lastRes && lastRes.clarity !== undefined ? Math.round(lastRes.clarity * 100) : 0;
-    st = !lastRes ? ['weak', 'Chu kỳ yếu (ngoài vùng 40–2500 Hz)']
-      : lastRes.quiet ? ['quiet', 'Tín hiệu quá nhỏ – tăng âm lượng hoặc độ khuếch đại']
-      : lastRes.weak ? ['weak', `Chu kỳ yếu – độ rõ NSDF ${pct}%`]
-      : ['ok', `Đã khóa – độ rõ NSDF ${pct}%`];
+    st = !lastRes ? ['weak', t('clRange')]
+      : lastRes.quiet ? ['quiet', t('clQuiet')]
+      : lastRes.weak ? ['weak', t('clWeak', { p: pct })]
+      : ['ok', t('clOk', { p: pct })];
   }
   $('clarityInfo').textContent = st[1];
   $('clarityInfo').dataset.state = st[0];
 
   $('info').textContent = running
-    ? `Nguồn: ${$('source').selectedOptions[0].text} · Tần số lấy mẫu thực tế: ${sr} Hz · ${md} ms/ô (${spd.toFixed(1)} mẫu/ô)` +
-      (frozen ? ' · Bấm vào đồ thị để đặt con trỏ A/B.' : '')
-    : 'Chọn nguồn (micro hoặc âm mẫu) rồi bấm Record.';
+    ? t('iRun', { src: srcLabel(), sr, ms: md, spd: spd.toFixed(1) }) + (frozen && !spec ? t('iCur') : '')
+    : t('iIdle');
 }
 
 function loop(now) {
   rafId = requestAnimationFrame(loop);
   if (frozen) return;
   analyser.getFloatTimeDomainData(buf);
+  if ($('view').value === 'spec') analyser.getFloatFrequencyData(specBuf);
   if (now - lastFreqTime >= FREQ_EVERY_MS) {
     lastFreqTime = now;
     lastRes = estimateFundamental(buf, audioCtx.sampleRate);
@@ -461,28 +777,46 @@ function loop(now) {
   refresh();
 }
 
-// Giải phóng đầy đủ: rAF, oscillator, MediaStream, AudioContext
+// Giải phóng đầy đủ: rAF, nguồn âm, MediaStream, AudioContext
 function stop() {
   cancelAnimationFrame(rafId);
   rafId = 0;
   if (synth) { synth.stop(); synth = null; }
-  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  if (stream) { stream.getTracks().forEach(tr => tr.stop()); stream = null; }
   if (audioCtx) { audioCtx.close(); audioCtx = null; }
-  analyser = spkGain = buf = null;
+  analyser = spkGain = buf = specBuf = null;
+  eggSrc = null;
+  runKind = '';
   frozen = null;
   lastRes = undefined;
   cursors = [];
   refresh();
 }
 
-async function start() {
+// Thông báo lỗi micro dễ hiểu: HTTP thường, bị chặn quyền, không có micro...
+function micError(err) {
+  if (location.protocol === 'file:') return t('eFile');
+  if (window.isSecureContext === false || !navigator.mediaDevices) return t('eSecure');
+  const n = err && err.name;
+  if (n === 'NotAllowedError' || n === 'SecurityError') return t('eDenied');
+  if (n === 'NotFoundError' || n === 'OverconstrainedError') return t('eNoMic');
+  return t('eStart', { m: err && err.message });
+}
+
+// kindArg = 'none' để mở sẵn đồ thị mà chưa có nguồn nào (dùng cho tiếng Fumo)
+async function start(kindArg) {
   if (starting) return;
   stop();
+  $('msg').textContent = '';
+  const kind = kindArg || $('source').value;
+  if (kind === 'file' && !fileData) {
+    $('msg').textContent = t('eNoFile');
+    return;
+  }
   starting = true;
   $('btn').disabled = $('source').disabled = true;   // tránh bấm Stop / đổi nguồn khi đang chờ quyền micro
-  $('msg').textContent = '';
-  const kind = $('source').value;
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  ctx.resume().catch(() => {});   // gọi ngay trong cú bấm để iOS/Safari không giữ ở trạng thái suspended
   let st = null, sy = null, an = null, spk = null;
   try {
     an = ctx.createAnalyser();
@@ -495,26 +829,25 @@ async function start() {
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
       });
       ctx.createMediaStreamSource(st).connect(an);
-    } else {
-      sy = makeSynth(ctx, kind, pitch());
+    } else if (kind !== 'none') {
+      sy = kind === 'file' ? await makeFileSource(ctx, fileData.slice(0)) : makeSynth(ctx, kind, pitch());
       sy.out.connect(an);
       sy.out.connect(spk);
     }
     await ctx.resume();
   } catch (err) {
-    if (st) st.getTracks().forEach(t => t.stop());
+    if (st) st.getTracks().forEach(tr => tr.stop());
     if (sy) sy.stop();
     ctx.close();
-    $('msg').textContent = location.protocol === 'file:' && kind === 'mic'
-      ? 'Trình duyệt chặn micro khi mở trực tiếp file://. Hãy chạy qua localhost hoặc HTTPS (âm mẫu vẫn dùng được).'
-      : 'Không thể khởi động nguồn âm: ' + err.message;
+    $('msg').textContent = kind === 'mic' ? micError(err) : kind === 'file' ? t('eDecode') : t('eStart', { m: err.message });
     starting = false;
     $('btn').disabled = $('source').disabled = false;
     refresh();
     return;
   }
-  audioCtx = ctx; analyser = an; spkGain = spk; synth = sy; stream = st;
+  audioCtx = ctx; analyser = an; spkGain = spk; synth = sy; stream = st; runKind = kind;
   buf = new Float32Array(an.fftSize);
+  specBuf = new Float32Array(an.frequencyBinCount);
   autoG = 4;
   lastFreqTime = 0;
   starting = false;
@@ -528,10 +861,17 @@ function setSpeaker() {
   if (spkGain) spkGain.gain.value = $('speaker').checked && synth ? 0.25 : 0;
 }
 
+function syncRef() {
+  const kind = $('source').value;
+  if (!refTouched) $('refHz').value = kind === 'mic' || kind === 'file' ? '' : pitch();
+}
+
 function syncSourceUI() {
-  const mic = $('source').value === 'mic';
-  $('pitch').disabled = mic;
-  $('speaker').disabled = mic;
+  const kind = $('source').value;
+  $('pitch').disabled = kind === 'mic' || kind === 'file';
+  $('speaker').disabled = kind === 'mic';
+  $('fileRow').hidden = kind !== 'file';
+  syncRef();
 }
 
 function toggleFreeze() {
@@ -543,19 +883,95 @@ function toggleFreeze() {
   } else {
     const d = new Float32Array(buf.length);
     analyser.getFloatTimeDomainData(d);
-    frozen = { data: d, sr: audioCtx.sampleRate };
+    const sp = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatFrequencyData(sp);
+    frozen = { data: d, sr: audioCtx.sampleRate, spec: sp };
     lastRes = estimateFundamental(d, frozen.sr);
   }
   refresh();
 }
 
-function setTheme(t) {
-  if (!['light', 'dark', 'fumo'].includes(t)) t = 'fumo';
-  document.documentElement.dataset.theme = t;
-  $('theme').value = t;
-  try { localStorage.setItem('theme', t); } catch (e) { /* bỏ qua */ }
+function setTheme(name) {
+  if (!['light', 'dark', 'fumo'].includes(name)) name = 'fumo';
+  document.documentElement.dataset.theme = name;
+  $('theme').value = name;
+  try { localStorage.setItem('theme', name); } catch (e) { /* bỏ qua */ }
   readTheme();
   refresh();
+}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-label]').forEach(el => { el.label = t(el.dataset.i18nLabel); });
+  Array.from($('scale').options).forEach(o => { o.text = `${o.value} ${t('msDiv')}`; });
+  [['lang', 'langTip'], ['egg', 'eggTip']].forEach(([id, key]) => {
+    $(id).title = t(key);
+    $(id).setAttribute('aria-label', t(key));
+  });
+  buildPitch();
+  renderLog();
+  refresh();
+}
+
+function setLang(l) {
+  lang = l === 'en' ? 'en' : 'vi';
+  $('lang').dataset.lang = lang;   // CSS chọn ảnh EN/VI theo thuộc tính này
+  try { localStorage.setItem('lang', lang); } catch (e) { /* bỏ qua */ }
+  applyLang();
+}
+
+// ===== Bảng đo kiểm định: f_tb và sai số tỉ đối δ =====
+const delta = (f, ref) => (ref ? (Math.abs(f - ref) / ref) * 100 : null);
+const fmt = (v, d = 2) => (v === null || v === undefined ? '—' : v.toFixed(d));
+const logCells = (r, i) => [i + 1, r.src, fmt(r.ref), fmt(r.f), fmt(delta(r.f, r.ref)), fmt(r.fm), fmt(r.fm ? delta(r.fm, r.ref) : null)];
+
+function addLog() {
+  if (!(lastRes && lastRes.f)) { $('msg').textContent = t('eNoF'); return; }
+  $('msg').textContent = '';
+  logRows.push({ src: srcLabel(), ref: parseFloat($('refHz').value) || null, f: lastRes.f, fm: lastMan ? lastMan.f : null });
+  if (logRows.length > MAX_LOG) logRows.shift();
+  $('logPanel').open = true;
+  renderLog();
+}
+
+function renderLog() {
+  const body = $('logBody');
+  body.textContent = '';
+  logRows.forEach((r, i) => {
+    const tr = body.insertRow();
+    logCells(r, i).forEach(v => { tr.insertCell().textContent = v; });
+  });
+  const sum = $('logSummary');
+  sum.className = 'logsum';
+  if (!logRows.length) { sum.textContent = t('lgEmpty'); return; }
+  const last = logRows[logRows.length - 1];
+  if (!last.ref) { sum.textContent = t('lgNoRef'); return; }
+  const grp = logRows.filter(r => r.ref === last.ref);
+  const avg = grp.reduce((a, r) => a + r.f, 0) / grp.length;
+  const d = delta(avg, last.ref);
+  sum.textContent = t('lgSum', { n: grp.length, r: last.ref, f: avg.toFixed(2), d: d.toFixed(2), ok: t(d <= 5 ? 'lgOk' : 'lgNo') });
+  sum.classList.add(d <= 5 ? 'ok' : 'fail');
+}
+
+function downloadCsv() {
+  const q = v => `"${String(v).replace(/"/g, '""')}"`;
+  const head = ['thNo', 'thSrc', 'thRef', 'thSoft', 'thDS', 'thHand', 'thDH'].map(k => t(k));
+  const text = '\ufeff' + [head, ...logRows.map(logCells)].map(r => r.map(q).join(',')).join('\n');
+  saveUrl(URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' })), 'bang-do-kiem-dinh.csv', true);
+}
+
+// Gắn <a> vào trang rồi mới click (Firefox cần); chỉ thu hồi URL sau khi trình duyệt đã bắt đầu tải
+function saveUrl(url, name, revoke) {
+  const a = document.createElement('a');
+  a.download = name;
+  a.href = url;
+  a.hidden = true;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  if (revoke) setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 function snapshot() {
@@ -569,13 +985,10 @@ function snapshot() {
     g.fillRect(0, canvas.height, c.width, 70);
     g.fillStyle = COLOR_LABEL;
     g.font = '600 22px system-ui, sans-serif';
-    g.fillText(`f = ${$('freq').textContent} Hz · T = ${$('period').textContent} ms · ${$('cells').textContent} ô/chu kỳ · ${$('scale').value} ms/ô · ${new Date().toLocaleString()}`, 16, canvas.height + 44);
-    const a = document.createElement('a');
-    a.download = `dao-dong-ky-${Date.now()}.png`;
-    a.href = c.toDataURL('image/png');
-    a.click();
+    g.fillText(t('snapTxt', { f: $('freq').textContent, T: $('period').textContent, c: $('cells').textContent, ms: $('scale').value, time: new Date().toLocaleString() }), 16, canvas.height + 44);
+    saveUrl(c.toDataURL('image/png'), `dao-dong-ky-${Date.now()}.png`, false);
   } catch (err) {
-    $('msg').textContent = 'Không thể lưu ảnh (mở qua http://localhost hoặc HTTPS): ' + err.message;
+    $('msg').textContent = t('eSnap', { m: err.message });
   }
 }
 
@@ -583,23 +996,65 @@ $('btn').addEventListener('click', () => (audioCtx ? stop() : start()));
 $('freeze').addEventListener('click', toggleFreeze);
 $('scale').addEventListener('change', refresh);
 $('gain').addEventListener('input', refresh);
+$('nCyc').addEventListener('input', refresh);
+$('view').addEventListener('change', () => { cursors = []; refresh(); });
 $('source').addEventListener('change', () => { syncSourceUI(); if (audioCtx) start(); });
-$('pitch').addEventListener('change', () => { if (synth) synth.setFreq(pitch()); });
+$('pitch').addEventListener('change', () => { if (synth) synth.setFreq(pitch()); syncRef(); });
 $('speaker').addEventListener('change', setSpeaker);
 $('theme').addEventListener('change', e => setTheme(e.target.value));
+$('lang').addEventListener('click', () => setLang(lang === 'vi' ? 'en' : 'vi'));
+$('refHz').addEventListener('input', () => { refTouched = $('refHz').value !== ''; });
+$('logAdd').addEventListener('click', addLog);
+$('logClear').addEventListener('click', () => { logRows.length = 0; renderLog(); });
+$('logCsv').addEventListener('click', downloadCsv);
 $('snap').addEventListener('click', snapshot);
 $('autoGain').addEventListener('change', e => {
   // Tắt tự động: thanh trượt giữ lại giá trị đang dùng để hình không nhảy
   if (!e.target.checked) $('gain').value = Math.min(10, Math.max(0.5, Math.round(autoG * 2) / 2));
   refresh();
 });
-const eggAudio = new Audio('assets/fumo.wav');   // easter egg: chỉ hiện ở theme FUMO
-$('egg').addEventListener('click', () => {
-  eggAudio.currentTime = 0;
-  eggAudio.play().catch(() => { $('msg').textContent = 'Không phát được âm thanh (thiếu assets/fumo.wav?).'; });
+$('fileIn').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  fileData = await file.arrayBuffer();
+  fileName = file.name;
+  if (audioCtx && $('source').value === 'file') start();
 });
+// Easter egg (chỉ hiện ở theme FUMO): bấm hình → tiếng Fumo đi qua AnalyserNode nên HIỆN LÊN ĐỒ THỊ
+// (và vẫn nghe được qua loa). Nạp sẵn file; nếu không nạp được (vd. mở file://) thì phát âm thanh thường.
+const eggAudio = new Audio('assets/fumo.wav');
+const eggReady = fetch('assets/fumo.wav').then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).catch(() => null);
+
+async function playEgg() {
+  $('msg').textContent = '';
+  const raw = await eggReady;
+  if (!raw) {
+    eggAudio.currentTime = 0;
+    eggAudio.play().then(() => { $('msg').textContent = t('eEggGraph'); }).catch(() => { $('msg').textContent = t('eEgg'); });
+    return;
+  }
+  if (starting) return;
+  if (!audioCtx) await start('none');       // chưa chạy: mở đồ thị trống (không xin quyền micro)
+  const ctx = audioCtx;
+  if (!ctx) return;
+  let audio;
+  try { audio = await decode(ctx, raw.slice(0)); } catch (err) { $('msg').textContent = t('eEgg'); return; }
+  if (audioCtx !== ctx) return;             // người dùng đã bấm Stop trong lúc giải mã
+  if (frozen) { frozen = null; cursors = []; lastFreqTime = 0; refresh(); }   // đang Freeze thì thả ra để thấy tiếng mới
+  if (eggSrc) { try { eggSrc.stop(); } catch (err) { /* đã dừng */ } }
+  const src = ctx.createBufferSource();
+  const out = ctx.createGain();
+  src.buffer = audio;
+  src.connect(out);
+  out.connect(analyser);                    // lên đồ thị
+  out.connect(ctx.destination);             // ra loa (không phụ thuộc ô "Phát ra loa")
+  src.onended = () => { src.disconnect(); out.disconnect(); if (eggSrc === src) eggSrc = null; };
+  src.start();
+  eggSrc = src;
+}
+$('egg').addEventListener('click', playEgg);
 canvas.addEventListener('click', e => {
-  if (!frozen) return;
+  if (!frozen || $('view').value === 'spec') return;
   const r = canvas.getBoundingClientRect();
   const x = ((e.clientX - r.left) * canvas.width) / r.width;
   cursors = cursors.length >= 2 ? [x] : [...cursors, x];
@@ -608,7 +1063,11 @@ canvas.addEventListener('click', e => {
 window.addEventListener('resize', refresh);
 window.addEventListener('pagehide', stop);
 
-let savedTheme = 'fumo';
-try { savedTheme = localStorage.getItem('theme') || savedTheme; } catch (e) { /* bỏ qua */ }
-syncSourceUI();
+let savedTheme = 'fumo', savedLang = 'vi';
+try {
+  savedTheme = localStorage.getItem('theme') || savedTheme;
+  savedLang = localStorage.getItem('lang') || savedLang;
+} catch (e) { /* bỏ qua */ }
 setTheme(savedTheme);
+setLang(savedLang);   // dựng danh sách cao độ trước…
+syncSourceUI();       // …rồi mới đồng bộ ô tần số chuẩn (tránh đọc danh sách rỗng)

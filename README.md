@@ -59,7 +59,7 @@ Then open http://localhost:8000 and allow microphone access.
 | Bật micro / Tắt micro | Starts or stops microphone capture |
 | Dừng hình (Freeze) / Chạy tiếp (Run) | Holds or resumes the display; the screen border turns orange while frozen |
 | Thang thời gian (ms/ô) | Time per horizontal division: 1, 2, 5, 10 or 20 ms/div (whole screen = 10 divisions) |
-| Độ khuếch đại (biên độ) | Vertical gain 0.5× to 10×; it changes only how tall the wave is drawn |
+| Độ khuếch đại (biên độ) | Vertical gain 0.5× to 10× (up to 50× in auto mode); it changes only how tall the wave is drawn |
 
 **Reading the screen**
 
@@ -183,7 +183,7 @@ Rồi mở http://localhost:8000 và cho phép trình duyệt dùng micro.
 | Bật micro / Tắt micro | Bắt đầu hoặc dừng thu âm |
 | Dừng hình (Freeze) / Chạy tiếp (Run) | Giữ hoặc tiếp tục hình; viền màn hình chuyển màu cam khi đang dừng |
 | Thang thời gian (ms/ô) | Thời gian ứng với mỗi ô ngang: 1, 2, 5, 10 hoặc 20 ms/ô (cả màn hình = 10 ô) |
-| Độ khuếch đại (biên độ) | Khuếch đại theo chiều dọc từ 0,5× đến 10×, chỉ đổi độ cao của sóng khi vẽ |
+| Độ khuếch đại (biên độ) | Khuếch đại theo chiều dọc từ 0,5× đến 10× (chế độ tự động: tới 50×), chỉ đổi độ cao của sóng khi vẽ |
 
 **Đọc số liệu trên màn hình**
 
@@ -256,17 +256,25 @@ Bản quyền (C) 2026 Pantherasami.
 
 ---
 
-## v2.0.0-beta.1
+## v2.0.0-beta.3
 
-- **VI:** bố cục mới (đồ thị bên trái, bảng điều khiển bên phải trên máy tính; xếp dọc trên điện thoại); 3 giao diện **Light / Dark / FUMO**; **tự động chỉnh biên độ** (bật/tắt); âm mẫu mở rộng: sóng sine/vuông/tam giác/răng cưa, sáo, clarinet, trumpet, guitar, piano, violin, organ, giọng /a/, nốt Do–Si (C3–C6) và 100/200 Hz; con trỏ A/B khi Freeze; lưu ảnh PNG; ở giao diện FUMO bấm vào hình nhân vật để phát âm thanh (easter egg).
-- **EN:** new layout, Light/Dark/FUMO themes, optional auto-amplitude, many more test timbres and the notes Do–Si (C3–C6), A/B cursors while frozen, PNG snapshot, and a FUMO-only easter egg. See `CHANGELOG.md` for the bugs found and fixed.
+Bản này đối chiếu với *Phiếu giao nhiệm vụ* và *Tài liệu hướng dẫn kĩ thuật* của dự án. / This release follows the project assignment and the technical guide.
 
-| File | Vai trò / Role |
+> Các phần HDSD phía trên viết cho v1.1.0 (nút "Bật micro", "Chạy tiếp"…). Ở v2 nút là **Thu âm / Dừng** và **Tạm dừng / Tiếp tục**. / The user guide above describes v1.1.0; v2 uses **Record / Stop** and **Pause / Resume**.
+
+| Yêu cầu / gợi ý | Đáp ứng trong phần mềm |
 |---|---|
-| `index.html` | Bố cục / page layout |
-| `style.css` | Giao diện và 3 theme / layout and themes |
-| `script.js` | DSP → âm mẫu → vẽ canvas → trạng thái và DOM / DSP → samples → canvas → state and DOM |
-| `assets/` | `record.png`, `pause.png`, `fumo-small.png`, `fumo.wav` |
+| Thu từ micro hoặc mở file `.wav/.mp3` | Nguồn **Micro** hoặc **Mở file âm thanh** (phát lặp) |
+| Đồ thị thời gian thực, trục t (ms), u tương đối, có lưới, nút Tạm dừng | Trục hoành ghi **ms**, nhãn `u = ±…`, lưới 10×8, nút Pause |
+| Đo khoảng giữa 2 đỉnh → T; đo qua n chu kỳ; hiển thị f | Con trỏ **A/B** khi Freeze, ô **n chu kỳ**, T = Δt/n, f = n/Δt; f tự động |
+| Sai số tỉ đối δ ≤ 5% với 200–1000 Hz; lặp 3 lần, lấy f_tb | **Bảng đo kiểm định**: f chuẩn, f phần mềm, f đo tay, δ, f_tb, xuất CSV |
+| Kiểm tra tần số lấy mẫu thực tế (Δt = 1/fs) | Hiển thị fs thực tế và Δt, mẫu/ô |
+| Mở rộng: phổ FFT, nhận diện nốt, lưu PNG, chạy trên điện thoại | Chế độ **Phổ FFT** (f₀ và họa âm), thẻ **Nốt nhạc** kèm cent, **Lưu ảnh PNG**, bố cục điện thoại |
+| Bảng nốt chuẩn (Đô … Si, quãng 3–5) và dây guitar | Danh sách cao độ đủ 12 nốt quãng 3–5 (+ Đô6), 6 dây guitar chuẩn, 100/200/1000 Hz |
+| Giao diện tiếng Việt và tiếng Anh | Nút ảnh **EN/VI** ở góc trên phải: bấm để đổi; phần *trong suốt* của ảnh là ngôn ngữ đang chọn; đổi màu theo theme |
 
-Micro cần `localhost` hoặc HTTPS; âm mẫu dùng được cả khi mở từ `file://`. / The microphone needs `localhost` or HTTPS; test sounds also work from `file://`.
+**Fumo (theme FUMO).** Bấm hình Fumo cạnh nút Thu âm / Pause: tiếng phát ra loa **và hiện lên đồ thị**. Nếu chưa bấm Thu âm, phần mềm tự mở đồ thị (không xin quyền micro); nếu đang chạy một nguồn khác, tiếng Fumo được trộn vào; nếu đang Freeze, hình được thả ra để thấy tiếng mới. Cần chạy qua `localhost`/HTTPS (nếu không nạp được `assets/fumo.wav` thì chỉ phát âm thanh thường). / Click the Fumo figure in the FUMO theme: the sound plays and is drawn on the scope.
 
+Chạy thử trên máy (PowerShell, trong thư mục dự án): `python -m http.server 8000` rồi mở http://localhost:8000.
+
+Các tệp: `index.html`, `style.css`, `script.js` (DSP → âm mẫu → i18n → vẽ canvas → trạng thái và DOM), `assets/` (`record.png`, `pause.png`, `fumo-small.png`, `fumo.wav`). Micro cần `localhost` hoặc HTTPS (điện thoại: dùng địa chỉ `https://`); âm mẫu và file dùng được cả khi mở từ `file://`. Chi tiết lỗi đã sửa: xem `CHANGELOG.md`.
