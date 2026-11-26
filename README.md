@@ -1,4 +1,4 @@
-# Virtual Oscilloscope / Dao động ký ảo — v2.0.0
+# Virtual Oscilloscope / Dao động ký ảo — v2.0.1
 
 **Language / Ngôn ngữ:** [English](#english) · [Tiếng Việt](#tiếng-việt)
 

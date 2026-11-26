@@ -1,5 +1,5 @@
 /*
-Dao động ký ảo (Virtual Oscilloscope) v2.0.0
+Dao động ký ảo (Virtual Oscilloscope) v2.0.1
 Copyright (C) 2026 Pantherasami
 
 This program is free software: you can redistribute it and/or modify
